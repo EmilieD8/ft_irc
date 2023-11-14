@@ -1,4 +1,17 @@
-#include "../inc/socket.hpp"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   socket.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mschaub <mschaub@student.42berlin.de>      +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/11/14 12:01:10 by mschaub           #+#    #+#             */
+/*   Updated: 2023/11/14 12:01:10 by mschaub          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+//#include "../inc/socket.hpp"
+#include "../inc/irc.hpp"
 
 Socket::Socket(int domain, int service, int protocol, int port, u_long interface)
 {
