@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 12:00:46 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 12:55:16 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/11/14 14:36:27 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 Binding::Binding(int domain, int service, int protocol, int port, u_long interface) : Socket(domain, service, protocol, port, interface)
 {
+    std::cout << "Here" << std::endl;
     ConnectToNetwork(getSock(), getAddress());
     testConnection(binding);
 }

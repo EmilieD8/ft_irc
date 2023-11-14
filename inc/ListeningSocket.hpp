@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ListeningSocket.hpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42berlin.de>      +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 11:55:10 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 12:00:22 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/14 14:32:35 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,4 +23,6 @@ class Listening : public Binding
     public:
         Listening(int domain, int service, int protocol, int port, u_long interface, int backlog);
         void startListening();
+        int getListening();
+        int getBacklog();
 };
