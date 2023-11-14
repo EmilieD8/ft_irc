@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Binding.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42berlin.de>      +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 12:00:46 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 12:00:46 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/14 12:55:16 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,16 @@
 
 Binding::Binding(int domain, int service, int protocol, int port, u_long interface) : Socket(domain, service, protocol, port, interface)
 {
-    setConnection(ConnectToNetwork(getSock(), getAddress()));
-    testConnection(getConnection());
+    ConnectToNetwork(getSock(), getAddress());
+    testConnection(binding);
 }
-int Binding::ConnectToNetwork(int sock, struct sockaddr_in address)
+void Binding::ConnectToNetwork(int sock, struct sockaddr_in address)
 {
-    return bind(sock, (struct sockaddr *)&address, sizeof(address));
+    binding = bind(sock, (struct sockaddr *)&address, sizeof(address));
+    return ;
+}
+
+int Binding::getBinding()
+{
+    return binding;
 }

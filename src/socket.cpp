@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 12:01:10 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 12:04:30 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/11/14 12:57:11 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,14 +41,4 @@ struct sockaddr_in Socket::getAddress()
 int Socket::getSock()
 {
     return sock;
-}
-
-int Socket::getConnection()
-{
-    return connection;
-}
-
-void Socket::setConnection(int connect)
-{
-    connection = connect;
 }

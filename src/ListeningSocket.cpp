@@ -4,10 +4,22 @@ Listening::Listening(int domain, int service, int protocol, int port, u_long int
 {
     backlog = backlg;
     startListening();
+    std::cout << "Here" << std::endl;
     testConnection(listening);
 }
 
 void Listening::startListening()
 {
-    listening = listen(getConnection(), backlog);
+    //std::cout << getSock() << std::endl;
+    listening = listen(getSock(), backlog);
+}
+
+int Listening::getListening()
+{
+    return listening;
+}
+
+int Listening::getBacklog()
+{
+    return backlog;
 }

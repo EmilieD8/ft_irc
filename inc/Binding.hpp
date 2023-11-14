@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Binding.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42berlin.de>      +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 11:59:04 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 11:59:04 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/14 12:55:25 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,11 @@
 
 class Binding : public Socket
 {
+    private:
+        int binding;
+        void ConnectToNetwork(int sock, struct sockaddr_in address);
+        
     public:
         Binding(int domain, int service, int protocol, int port, u_long interface);
-        int ConnectToNetwork(int sock, struct sockaddr_in address);
+        int getBinding();
 };
