@@ -13,8 +13,7 @@
 //#include "../inc/socket.hpp"
 #include "../inc/irc.hpp"
 
-Socket::Socket(int domain, int service, int protocol, int port, u_long interface)
-{
+Socket::Socket(int domain, int service, int protocol, int port, u_long interface) {
     // Address struct definined --> has to be taken from the config files
     address.sin_family = domain;
     address.sin_port = htons(port);
@@ -26,19 +25,16 @@ Socket::Socket(int domain, int service, int protocol, int port, u_long interface
 
 void Socket::testConnection(int toTest) // to test the sock or the connection
 {
-    if (toTest < 0)
-    {
+    if (toTest < 0) {
         std::cerr << "Failed to connect..." << errno << std::endl;
         exit(EXIT_FAILURE);
     }
 }
 
-struct sockaddr_in Socket::getAddress()
-{
+struct sockaddr_in Socket::getAddress() {
     return address;
 }
 
-int Socket::getSock()
-{
+int Socket::getSock() {
     return sock;
 }

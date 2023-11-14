@@ -12,11 +12,9 @@
 
 #pragma once
 
-#include "Binding.hpp"
 #include "irc.hpp"
 
-class Listening : public Binding
-{
+class Listening : public Binding {
     private:
         int backlog;
         int listening;

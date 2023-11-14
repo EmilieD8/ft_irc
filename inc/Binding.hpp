@@ -15,8 +15,7 @@
 #include "socket.hpp"
 #include "irc.hpp"
 
-class Binding : public Socket
-{
+class Binding : public Socket {
     private:
         int binding;
         void ConnectToNetwork(int sock, struct sockaddr_in address);

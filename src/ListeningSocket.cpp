@@ -8,18 +8,15 @@ Listening::Listening(int domain, int service, int protocol, int port, u_long int
     testConnection(listening);
 }
 
-void Listening::startListening()
-{
+void Listening::startListening() {
     std::cout << getSock() << std::endl;
     listening = listen(getSock(), backlog);
 }
 
-int Listening::getListening()
-{
+int Listening::getListening() {
     return listening;
 }
 
-int Listening::getBacklog()
-{
+int Listening::getBacklog() {
     return backlog;
 }

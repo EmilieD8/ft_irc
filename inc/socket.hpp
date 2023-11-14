@@ -2,8 +2,7 @@
 
 #include "irc.hpp"
 
-class Socket
-{
+class Socket {
     private:
         struct sockaddr_in address;
         int sock;
