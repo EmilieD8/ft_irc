@@ -1,6 +1,6 @@
-#include "ListeningSocket.hpp"
+#include "../inc/ListeningSocket.hpp"
 
-Listening::Listening(int domain, int service, int protocol, int port, u_long interface, int backlg) : Binding(domain, service, protocal, port, interface)
+Listening::Listening(int domain, int service, int protocol, int port, u_long interface, int backlg) : Binding(domain, service, protocol, port, interface)
 {
     backlog = backlg;
     startListening();

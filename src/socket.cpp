@@ -1,4 +1,4 @@
-#include <socket.hpp>
+#include "../inc/socket.hpp"
 
 Socket::Socket(int domain, int service, int protocol, int port, u_long interface)
 {
