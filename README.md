@@ -10,3 +10,10 @@ You will be able to test it with your browser.
 - Emilie Drouot
 
 ## Usage
+
+#Ressources
+
+https://modern.ircdocs.horse/#ping-message
+https://datatracker.ietf.org/doc/html/rfc1459
+https://beej.us/guide/bgnet/
+https://www.irchelp.org/faq/irctutorial.html

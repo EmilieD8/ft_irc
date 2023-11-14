@@ -1,10 +1,14 @@
 # Source
 
 SRC =	src/main.cpp \
+		src/Binding.cpp \
+		src/ListeningSocket.cpp \
+		src/socket.cpp
 
-HEADERS =	inc/webserv.hpp \
-			inc/Request.hpp \
-			inc/Response.hpp \
+HEADERS =	inc/irc.hpp \
+			inc/Binding.hpp \
+			inc/ListeningSocket.hpp \
+			inc/socket.hpp \
 
 OBJS =	$(SRC:.cpp=.o)
 

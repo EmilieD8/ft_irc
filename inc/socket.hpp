@@ -1,6 +1,6 @@
 #pragma once
 
-#include "webserv.hpp"
+#include "irc.hpp"
 
 class Socket
 {
@@ -10,7 +10,7 @@ class Socket
         int connection;
     public:
         Socket(int domain, int service, int protocol, int port, u_long interface);
-        virtual int bindOrConnect(int sock, struct sockaddr_in address) = 0;
+        virtual int ConnectToNetwork(int sock, struct sockaddr_in address) = 0;
         void testConnection(int toTest);
         struct sockaddr_in getAddress();
         int getSock();
