@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   socket.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42berlin.de>      +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/14 12:01:10 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 12:01:10 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/14 12:04:30 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ void Socket::testConnection(int toTest) // to test the sock or the connection
 {
     if (toTest < 0)
     {
-        std::cerr << "Failed to connect..." << std::endl;
+        std::cerr << "Failed to connect..." << errno << std::endl;
         exit(EXIT_FAILURE);
     }
 }
