@@ -17,7 +17,7 @@ Binding::Binding(int domain, int service, int protocol, int port, u_long interfa
     std::cout << "Here" << std::endl;
     ConnectToNetwork(getSock(), getAddress());
     testConnection(binding);
-    std::cout << "Failure1" << std::endl;
+    std::cout << "Failure" << std::endl;
 }
 
 void Binding::ConnectToNetwork(int sock, struct sockaddr_in address) {
