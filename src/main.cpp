@@ -57,10 +57,11 @@ int main()
             recv(server, buffer, bufferSize, 0);
         }
 
-        // while (!isExit);
-        do {
+        while (!isExit)
+        {
             std::cout << "\nServer: ";
-            do {
+            while (*buffer != '*')
+            {
                 std::cin >> buffer;
                 send(server, buffer, bufferSize, 0);
                 if (*buffer == '#') {
@@ -68,18 +69,19 @@ int main()
                     *buffer = '*';
                     isExit = true;
                 }
-            } while (*buffer != '*');
-
-            std::cout << "Client: ";
-            do {
+            } 
+            while (*buffer != '*')
+            {
+                std::cout << "Client: ";
                 recv(server, buffer, bufferSize, 0);
                 std::cout << buffer << " ";
-                if (*buffer == '#') {
+                if (*buffer == '#') 
+                {
                     *buffer = '*';
                     isExit = true;
                 }
-            } while (*buffer != '*');
-        } while (!isExit);
+            } 
+        }
         std::cout << "\n\n=> Connection terminated with IP " << inet_ntoa(server_addr.sin_addr);
         close(server);
         std::cout << "\nGoodbye..." << std::endl;
