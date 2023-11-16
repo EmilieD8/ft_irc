@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/23 10:58:19 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/16 11:29:37 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/11/16 14:22:38 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,6 @@
 #include <stdlib.h>
 #include <netdb.h>
 
-#include "Binding.hpp"
-#include "socket.hpp"
-#include "ListeningSocket.hpp"
+
 #include "Server.hpp"
 
