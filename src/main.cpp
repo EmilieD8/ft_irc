@@ -1,36 +1,92 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/10/22 13:58:25 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/14 14:35:58 by edrouot          ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../inc/irc.hpp"
 
-int main(int argc, char **argv) {
-    std::cout << "Starting..." << std::endl;
-    std::cout << "Binding socket..." << std::endl;
-    Binding bindsocket(AF_INET, SOCK_STREAM, 0, 6667, INADDR_ANY);
-    std::cout << "Listening Socket..." << std::endl;
-    Listening listensocket(AF_INET, SOCK_STREAM, 0, 6667, INADDR_ANY, 10);
-    std::cout << "SUCESS!" << std::endl;
+int main()
+{
+    int client, server;
+    int portNum = 6667;
+    bool isExit = false;
+    int bufferSize = 1024;
+    char buffer[bufferSize];
 
-    if (argc != 3) {
-        std::cerr << "Usage: ./ircserv  <port> <password>" << std::endl;
+    struct sockaddr_in server_addr;
+    socklen_t size;
+
+    client = socket(AF_INET, SOCK_STREAM, 0);
+    if (client < 0)
+    {
+        std::cout << "Error establishing the socket..." << std::endl;
         exit(EXIT_FAILURE);
     }
-    try {
-        int port = std::stoi(argv[1]);
-        std::string password = argv[2];
-        /* Launch server */
-    }
-    catch (std::exception &e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    std::cout << "Socket is created" << std::endl;
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htons(INADDR_ANY);
+    server_addr.sin_port = htons(portNum);
+
+
+    if (bind(client, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        std::cout << "Error binding" << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    std::cout << "Looking for clients " << std::endl;
+    listen(client, 1);
+    int clientCount = 1;
+    size = sizeof(server_addr);
+    server = accept(client, (struct sockaddr *)&server_addr, &size);
+    if (server < 0)
+        std::cout << "Error accepting" << std::endl;
+
+    while (server > 0)
+    {
+        strcpy(buffer, "Server connected...\n");
+        send(server, buffer, bufferSize, 0);
+        std::cout << "Connected with the client #" << clientCount << " ok" << std::endl;
+        std::cout << "Enter # to end the connection" << std::endl;
+        std::cout << "client:";
+        recv(server, buffer, bufferSize, 0);
+        while (*buffer != '*')
+        {
+            std::cout << buffer << " ";
+            if (*buffer == '#')
+            {
+                *buffer = '*';
+                isExit = true;
+            }
+            recv(server, buffer, bufferSize, 0);
+        }
+
+        // while (!isExit);
+        do {
+            std::cout << "\nServer: ";
+            do {
+                std::cin >> buffer;
+                send(server, buffer, bufferSize, 0);
+                if (*buffer == '#') {
+                    send(server, buffer, bufferSize, 0);
+                    *buffer = '*';
+                    isExit = true;
+                }
+            } while (*buffer != '*');
+
+            std::cout << "Client: ";
+            do {
+                recv(server, buffer, bufferSize, 0);
+                std::cout << buffer << " ";
+                if (*buffer == '#') {
+                    *buffer = '*';
+                    isExit = true;
+                }
+            } while (*buffer != '*');
+        } while (!isExit);
+        std::cout << "\n\n=> Connection terminated with IP " << inet_ntoa(server_addr.sin_addr);
+        close(server);
+        std::cout << "\nGoodbye..." << std::endl;
+        isExit = false;
+        exit(1);
+    }
+
+    close(client);
+    return 0;
 }
