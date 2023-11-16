@@ -3,12 +3,14 @@
 SRC =	src/main.cpp \
 		src/Binding.cpp \
 		src/ListeningSocket.cpp \
-		src/socket.cpp
+		src/socket.cpp \
+		src/Server.cpp \
 
 HEADERS =	inc/irc.hpp \
 			inc/Binding.hpp \
 			inc/ListeningSocket.hpp \
 			inc/socket.hpp \
+			inc/Server.hpp \
 
 OBJS =	$(SRC:.cpp=.o)
 
