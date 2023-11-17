@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <fcntl.h>
+#include <sstream>
 
 #include "Server.hpp"
 
