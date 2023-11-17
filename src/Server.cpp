@@ -24,10 +24,14 @@ Server & Server::operator=(Server const & src) {
 void Server::launchServer() {
     int client;
     int server;
+    int receive; 
     int bufferSize = 1024;
     bool isExit = false;
     char buffer[bufferSize];
+    int closeConnection;
     socklen_t size;
+
+    int compressArr;
     struct sockaddr_in server_addr;
     int rc;
 
@@ -71,6 +75,7 @@ void Server::launchServer() {
     int timeout = 3 * 60 * 1000; 
     // 3 min in millisecond, it's going to be the time allowed for the conenction to connect in poll
     int nbConnection = 1;
+    int sentBytes;
     do 
     {
         std::cout << "Waiting on polling...\n";
@@ -104,7 +109,11 @@ void Server::launchServer() {
                     server =  accept(client, (struct sockaddr *)&server_addr, &size);
                     if (server < 0)
                     {
-                        std::cout << "Error accepting" << std::endl;
+                        if (errno == EWOULDBLOCK)
+                        {
+                            std::cout << "Error accepting" << std::endl; // should throw an exception instead
+                            isExit = true;
+                        }
                         break;
                     }
                     std::cout << "New incoming connection #" << server << std::endl;
@@ -115,88 +124,56 @@ void Server::launchServer() {
             }
             else
             {
-//                 r******************************/
-//           rc = send(fds[i].fd, buffer, len, 0);
-//           if (rc < 0)
-//           {
-//             perror("  send() failed");
-//             close_conn = TRUE;c = recv(fds[i].fd, buffer, sizeof(buffer), 0);
-//           if (rc < 0)
-//           {
-//             if (errno != EWOULDBLOCK)
-//             {
-//               perror("  recv() failed");
-//               close_conn = TRUE;
-//             }
-//             break;
-//           }
+                receive = recv(connectionFds[i].fd, buffer, bufferSize, 0);
+                if (receive < 0)
+                {
+                    if (errno == EWOULDBLOCK)
+                    {
+                        std::cout << "Error receiving" << std::endl; // should throw an exception instead
+                        closeConnection = 1;
+                    }
+                    break;
+                }
+                if (receive == 0)
+                {
+                    std::cout << "Connection closed" << std::endl;
+                    closeConnection = 1;
+                    break;
+                }
+                std::cout << receive << " bytes received" << std::endl;
+                sentBytes = send(connectionFds[i].fd, buffer, receive, 0);
+                if (sentBytes <==> 0)
+                {
+                    std::cout << "Send failed" << std::endl;
+                    closeConnection = 1;
+                    break;
+                }
+            } while(1);
+            if (closeConnection == 1) // returning the fd to -1 so it is not used 
+            {
+                close(connectionFds[i].fd);
+                connectionFds[i].fd = -1;
+                compressArr = 1;
+            }
+            if (compressArr) // deleting the failed fd from the array ==> need to be changed since we use a vector
+            {
+                compressArr = 0;
+                for (int i = 0; i < nbConnection; i++)
+                {
+                    if (connectionFds[i].fd == -1)
+                    {
+                        for (int j = i; j < nbConnection - 1;j++)
+                            connectionFds[j].fd = connectionFds[j+1].fd;
+                        i -= 1;
+                        nbConnection -= 1;
+                    }
+                }
+            } while (isExit == false);
 
-//           /*****************************************************/
-//           /* Check to see if the connection has been           */
-//           /* closed by the client                              */
-//           /*****************************************************/
-//           if (rc == 0)
-//           {
-//             printf("  Connection cl
-//             break;
-//           }
-
-//         } while(TRUE);
-
-//         /*******************************************************/
-//         /* If the close_conn flag was turned on, we need       */
-//         /* to clean up this active connection. This            */
-//         /* clean up process includes removing the              */
-//         /* descriptor.                                         */
-//         /*******************************************************/
-//         if (close_conn)
-//         {
-//           close(fds[i].fd);
-//           fds[i].fd = -1;
-//           compress_array = TRUE;
-//         }
-
-
-//       }  /* End of existing connection is readable             */
-//     } /* End of loop through pollable descriptors              */
-
-//     /***********************************************************/
-//     /* If the compress_array flag was turned on, we need       */
-//     /* to squeeze together the array and decrement the number  */
-//     /* of file descriptors. We do not need to move back the    */
-//     /* events and revents fields because the events will always*/
-//     /* be POLLIN in this case, and revents is output.          */
-//     /***********************************************************/
-//     if (compress_array)
-//     {
-//       compress_array = FALSE;
-//       for (i = 0; i < nfds; i++)
-//       {
-//         if (fds[i].fd == -1)
-//         {
-//           for(j = i; j < nfds-1; j++)
-//           {
-//             fds[j].fd = fds[j+1].fd;
-//           }
-//           i--;
-//           nfds--;
-//         }
-//       }
-//     }
-
-//   } while (end_server == FALSE); /* End of serving running.    */
-
-//   /*************************************************************/
-//   /* Clean up all of the sockets that are open                 */
-//   /*************************************************************/
-//   for (i = 0; i < nfds; i++)
-//   {
-//     if(fds[i].fd >= 0)
-//       close(fds[i].fd);
-//   }
-//             }
-
-
-//         }
-//     }
-          }
+            for (i = 0; i < (int const)nbConnection; i++)
+            {
+                if (connectionFds[i].fd >= 0)
+                    close(connectionFds[i].fd);
+            }
+        }
+    }
