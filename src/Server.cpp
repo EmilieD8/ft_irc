@@ -34,7 +34,8 @@ void Server::init() {
     fcntl(_server.fd, F_SETFL, setting | O_NONBLOCK);
 
     _server.addr.sin_family = AF_INET;
-
+    if (_port < 1500)
+        throw std::runtime_error("Invalid port number, should be > 1500");
     _server.addr.sin_port = htons(_port);
     _server.addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -43,7 +44,7 @@ void Server::init() {
         throw std::runtime_error("Error binding");
 
     std::cout << "Listening..." << std::endl;
-    if (listen(_server.fd, 1) < 0)
+    if (listen(_server.fd, SOMAXCONN) < 0)
         throw std::runtime_error("Error listening");
 
     _pollfds = new std::vector<pollfd>(maxClients + 1);
@@ -75,6 +76,7 @@ void Server::connect() {
     if (_num_clients == maxClients)
         throw std::runtime_error("Error too many clients");
 
+    
     char buffer[1024];
     ssize_t receive = recv(_client.fd, buffer, 1024, 0);
     if (receive < 0) {
@@ -84,6 +86,7 @@ void Server::connect() {
     std::istringstream iss(buffer);
     std::string line;
     while (std::getline(iss, line)) {
+        std::cout << line << std::endl;
         if (line.compare(0, 5, "PASS ") == 0) {
             std::string password = line.substr(5, line.size() - 6);
             if (password.compare(_password) != 0) {
@@ -94,7 +97,6 @@ void Server::connect() {
         }
     }
 
-
     connectionFds[_num_clients + 1].fd = _client.fd;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
 
@@ -102,13 +104,37 @@ void Server::connect() {
     _num_clients++;
 }
 
-void Server::read_client() {
+void Server::read_client() 
+{
+    char buffer[4096];
+    memset(buffer, 0, sizeof(buffer));
+    int bytes = 0;
     std::vector<pollfd> &connectionFds = *_pollfds;
     for (int i = 1; i < _num_clients + 1; i++) {
-        if (connectionFds[i].revents & POLLIN) {
-            // TODO: read message
+            std::cout << i << std::endl;
+        if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN) 
+        {
             std::cout << "Reading..." << std::endl;
+            bytes = recv(connectionFds[i].fd, buffer, sizeof(buffer), 0);
+            if (bytes == -1)
+            {
+                if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                    // No data available, continue to the next client
+                    continue;
+                } else {
+                    throw std::runtime_error("Error in the reading");
+                }
+            }
+            if (bytes == 0)
+                throw std::runtime_error("Error in the reading, bytes == 0");
+            
+            std::istringstream iss(buffer);
+            std::string message;
+            while (std::getline(iss, message)) {
+                std::cout << "Message: " << message << std::endl;
+             }            
         }
+        std::cout << "end " << i << std::endl;
     }
 }
 
@@ -124,14 +150,18 @@ void Server::launchServer() {
         try {
             socket_polling();
             connect();
-            if (!isExit)
+            while (isExit == false)
+            {
                 read_client();
+
+            }
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
     }
+    
 }
 
 
