@@ -70,32 +70,33 @@ void Server::connect() {
     if (_client.fd < 0)
         throw std::runtime_error("Error accepting");
 
-    int setting = fcntl(_client.fd, F_GETFL, 0);
-    fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
+        int setting = fcntl(_client.fd, F_GETFL, 0);
+        fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
 
     if (_num_clients == maxClients)
         throw std::runtime_error("Error too many clients");
 
     
-    char buffer[1024];
-    ssize_t receive = recv(_client.fd, buffer, 1024, 0);
-    if (receive < 0) {
-        throw std::runtime_error("Receive error");
-    }
+    // char buffer[1024];
+    // ssize_t receive = recv(_client.fd, buffer, 1024, 0);
+    // if (receive < 0) 
+    // {
+    //     throw std::runtime_error("Receive error");
+    // }
 
-    std::istringstream iss(buffer);
-    std::string line;
-    while (std::getline(iss, line)) {
-        std::cout << line << std::endl;
-        if (line.compare(0, 5, "PASS ") == 0) {
-            std::string password = line.substr(5, line.size() - 6);
-            if (password.compare(_password) != 0) {
-                throw std::runtime_error("Error wrong password");
-                isExit = true;
-                break;
-            }
-        }
-    }
+    // std::istringstream iss(buffer);
+    // std::string line;
+    // while (std::getline(iss, line)) {
+    //     std::cout << line << std::endl;
+    //     if (line.compare(0, 5, "PASS ") == 0) {
+    //         std::string password = line.substr(5, line.size() - 6);
+    //         if (password.compare(_password) != 0) {
+    //             throw std::runtime_error("Error wrong password");
+    //             isExit = true;
+    //             break;
+    //         }
+    //     }
+    // }
 
     connectionFds[_num_clients + 1].fd = _client.fd;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
@@ -110,8 +111,9 @@ void Server::read_client()
     memset(buffer, 0, sizeof(buffer));
     int bytes = 0;
     std::vector<pollfd> &connectionFds = *_pollfds;
-    for (int i = 1; i < _num_clients + 1; i++) {
-            std::cout << i << std::endl;
+    for (int i = 1; i < _num_clients + 1; i++) 
+    {
+            // std::cout << i << std::endl;
         if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN) 
         {
             std::cout << "Reading..." << std::endl;
