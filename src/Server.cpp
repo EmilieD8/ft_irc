@@ -1,9 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mschaub <mschaub@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
+/*   Updated: 2023/11/24 14:44:02 by mschaub          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../inc/irc.hpp"
 
 Server::Server(int port, std::string password) {
     _port = port;
     _name = "Lit Server";
     _password = password;
+	isExit = false;
     init();
 }
 
@@ -68,13 +81,13 @@ void Server::connect() {
 
     _client.fd = accept(_server.fd, (struct sockaddr *) &_client.addr, &size);
     if (_client.fd < 0)
-        throw std::runtime_error("Error accepting");
+        throw std::runtime_error("Accepting failed");
 
         int setting = fcntl(_client.fd, F_GETFL, 0);
         fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
 
     if (_num_clients == maxClients)
-        throw std::runtime_error("Error too many clients");
+        throw std::runtime_error("Too many clients");
 
     
     // char buffer[1024];
@@ -111,7 +124,10 @@ void Server::read_client()
     memset(buffer, 0, sizeof(buffer));
     int bytes = 0;
     std::vector<pollfd> &connectionFds = *_pollfds;
-    for (int i = 1; i < _num_clients + 1; i++) 
+//	std::cout << connectionFds[0].fd << std::endl;
+//	std::cout << connectionFds[1].fd << std::endl;
+
+	for (int i = 1; i <= _num_clients; i++)
     {
             // std::cout << i << std::endl;
         if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN) 
@@ -123,20 +139,19 @@ void Server::read_client()
                 if (errno == EWOULDBLOCK || errno == EAGAIN) {
                     // No data available, continue to the next client
                     continue;
-                } else {
-                    throw std::runtime_error("Error in the reading");
                 }
+				else
+                    throw std::runtime_error("Error reading inside loop");
             }
             if (bytes == 0)
                 throw std::runtime_error("Error in the reading, bytes == 0");
             
             std::istringstream iss(buffer);
             std::string message;
-            while (std::getline(iss, message)) {
+            while (std::getline(iss, message))
                 std::cout << "Message: " << message << std::endl;
-             }            
         }
-        std::cout << "end " << i << std::endl;
+        //std::cout << "end " << i << std::endl;
     }
 }
 
@@ -149,21 +164,19 @@ void Server::launchServer() {
 
     std::cout << "Launching..." << std::endl;
     while (isExit == false) {
-        try {
+		try {
             socket_polling();
             connect();
-            while (isExit == false)
-            {
-                read_client();
-
-            }
+			std::cout << "next : reading" << std::endl;
+         	//while (isExit == false) {
+		 		read_client();
+			//}
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
     }
-    
 }
 
 
