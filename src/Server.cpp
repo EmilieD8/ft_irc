@@ -70,12 +70,15 @@ void Server::socket_polling() {
     int num_ready = poll(connectionFds.data(), _num_clients + 1, -1);
     if (num_ready < 0)
         throw std::runtime_error("Error polling");
+	std::cout << connectionFds[_num_clients + 1].events << std::endl;
+	std::cout << connectionFds[_num_clients + 1].revents << std::endl;
+
 }
 
 void Server::connect() {
     std::vector<pollfd> &connectionFds = *_pollfds;
-    if (!(connectionFds[0].revents & POLLIN))
-        return;
+    //if (!(connectionFds[0].revents & POLLIN))
+      //  return;
 
     socklen_t size = sizeof(_client.addr);
 
@@ -89,36 +92,30 @@ void Server::connect() {
     if (_num_clients == maxClients)
         throw std::runtime_error("Too many clients");
 
-    
-    // char buffer[1024];
-    // ssize_t receive = recv(_client.fd, buffer, 1024, 0);
-    // if (receive < 0) 
-    // {
-    //     throw std::runtime_error("Receive error");
-    // }
-
-    // std::istringstream iss(buffer);
-    // std::string line;
-    // while (std::getline(iss, line)) {
-    //     std::cout << line << std::endl;
-    //     if (line.compare(0, 5, "PASS ") == 0) {
-    //         std::string password = line.substr(5, line.size() - 6);
-    //         if (password.compare(_password) != 0) {
-    //             throw std::runtime_error("Error wrong password");
-    //             isExit = true;
-    //             break;
-    //         }
-    //     }
-    // }
-
-    connectionFds[_num_clients + 1].fd = _client.fd;
+//	char buffer[4096];
+//	int receive = recv(_client.fd, buffer, 4096, 0);
+//	if (receive < 0)
+//		throw std::runtime_error("Receive error");
+//	std::istringstream iss(buffer);
+//	std::string line;
+//	while (std::getline(iss, line)) {
+//		std::cout << " line is :" << line << std::endl;
+//		if (line.compare(0, 5, "PASS ") == 0) {
+//			std::string password = line.substr(5, line.size() - 6);
+//			if (password.compare(_password) != 0) {
+//				throw std::runtime_error("Error wrong password");
+//				isExit = true;
+//				break;
+//		 }
+//	 }
+	connectionFds[_num_clients + 1].fd = _client.fd;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
 
     // TODO: create a user
     _num_clients++;
 }
 
-void Server::read_client() 
+void Server::read_client()
 {
     char buffer[4096];
     memset(buffer, 0, sizeof(buffer));
@@ -129,8 +126,12 @@ void Server::read_client()
 
 	for (int i = 1; i <= _num_clients; i++)
     {
-            // std::cout << i << std::endl;
-        if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN) 
+            // std::cout << i << std::end;
+//		if (connectionFds[_num_clients + 1].revents == 1) {
+//			std::cout << connectionFds[_num_clients + 1].events << std::endl;
+//			std::cout << connectionFds[_num_clients + 1].revents << std::endl;
+//		}
+        if (connectionFds[i].revents & POLLIN)
         {
             std::cout << "Reading..." << std::endl;
             bytes = recv(connectionFds[i].fd, buffer, sizeof(buffer), 0);
@@ -145,7 +146,7 @@ void Server::read_client()
             }
             if (bytes == 0)
                 throw std::runtime_error("Error in the reading, bytes == 0");
-            
+
             std::istringstream iss(buffer);
             std::string message;
             while (std::getline(iss, message))
