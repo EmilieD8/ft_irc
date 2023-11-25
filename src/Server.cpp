@@ -70,24 +70,22 @@ void Server::socket_polling() {
     int num_ready = poll(connectionFds.data(), _num_clients + 1, -1);
     if (num_ready < 0)
         throw std::runtime_error("Error polling");
-	std::cout << connectionFds[_num_clients + 1].events << std::endl;
-	std::cout << connectionFds[_num_clients + 1].revents << std::endl;
 
 }
 
 void Server::connect() {
     std::vector<pollfd> &connectionFds = *_pollfds;
-    //if (!(connectionFds[0].revents & POLLIN))
-      //  return;
+    if (!(connectionFds[0].revents & POLLIN))
+        return;
 
     socklen_t size = sizeof(_client.addr);
 
     _client.fd = accept(_server.fd, (struct sockaddr *) &_client.addr, &size);
-    if (_client.fd < 0)
+    if (_client.fd == -1)
         throw std::runtime_error("Accepting failed");
 
-        int setting = fcntl(_client.fd, F_GETFL, 0);
-        fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
+    int setting = fcntl(_client.fd, F_GETFL, 0);
+    fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
 
     if (_num_clients == maxClients)
         throw std::runtime_error("Too many clients");
@@ -117,42 +115,48 @@ void Server::connect() {
 
 void Server::read_client()
 {
-    char buffer[4096];
-    memset(buffer, 0, sizeof(buffer));
-    int bytes = 0;
     std::vector<pollfd> &connectionFds = *_pollfds;
-//	std::cout << connectionFds[0].fd << std::endl;
-//	std::cout << connectionFds[1].fd << std::endl;
+    static std::string buffer;
 
-	for (int i = 1; i <= _num_clients; i++)
+    for (int i = 1; i <= _num_clients; i++)
     {
-            // std::cout << i << std::end;
-//		if (connectionFds[_num_clients + 1].revents == 1) {
-//			std::cout << connectionFds[_num_clients + 1].events << std::endl;
-//			std::cout << connectionFds[_num_clients + 1].revents << std::endl;
-//		}
-        if (connectionFds[i].revents & POLLIN)
+        if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN)
         {
             std::cout << "Reading..." << std::endl;
-            bytes = recv(connectionFds[i].fd, buffer, sizeof(buffer), 0);
+            char buf[4096];
+            memset(buf, 0, sizeof(buf));
+            int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
+            if (bytes > 0) {
+                std::string data(buf, bytes);
+                std::cout << "Received: " << data << std::endl;
+
+                /* Tried to answer pong when PING is entered, not sure if answer is in correct format */
+                if (data.compare(0, 4, "PING") == 0)
+                {
+                    std::cout << "PING received" << std::endl;
+                    // Extract the parameter from the PING message
+                    std::string pingParameter = data.substr(5);
+
+                    // Respond with a PONG message
+                    std::string pongMessage = "PONG :" + pingParameter + "\r\n";
+                    send(connectionFds[i].fd, pongMessage.c_str(), pongMessage.size(), 0);
+                }
+            }
             if (bytes == -1)
             {
                 if (errno == EWOULDBLOCK || errno == EAGAIN) {
                     // No data available, continue to the next client
                     continue;
                 }
-				else
+                else
                     throw std::runtime_error("Error reading inside loop");
             }
             if (bytes == 0)
                 throw std::runtime_error("Error in the reading, bytes == 0");
 
-            std::istringstream iss(buffer);
-            std::string message;
-            while (std::getline(iss, message))
-                std::cout << "Message: " << message << std::endl;
+            buffer += buf;
+            execute(buffer);
         }
-        //std::cout << "end " << i << std::endl;
     }
 }
 
@@ -168,16 +172,42 @@ void Server::launchServer() {
 		try {
             socket_polling();
             connect();
-			std::cout << "next : reading" << std::endl;
-         	//while (isExit == false) {
-		 		read_client();
-			//}
+            send_message();
+            read_client();
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
     }
+}
+
+/* That was in mcombeaus repo, not sure what it does... */
+void Server::send_message() {
+    std::vector<pollfd> &connectionFds = *_pollfds;
+
+    for (std::vector<s_message>::iterator it = _messages.begin(); it != _messages.end(); it++) {
+        const s_message &message = *it;
+        int index = -1;
+        for (int i = 1; i <= _num_clients; i++) {
+            if (connectionFds[i].fd == message.fd) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+            throw std::runtime_error("Error sending message");
+    }
+}
+
+/* Function to execute the command, atm just splitting it but not doing anything */
+void Server::execute(std::string &message) {
+    size_t pos = message.find("\r\n");
+    if (pos == std::string::npos)
+        return;
+    std::string command = message.substr(0, pos);
+    //std::cout << "Command: " << command << std::endl;
+    message.erase(0, pos + 2);
 }
 
 

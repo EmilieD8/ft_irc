@@ -6,6 +6,11 @@ struct s_socket {
     struct sockaddr_in addr;
 };
 
+struct s_message {
+    std::string message;
+    int fd;
+};
+
 class Server {
     public:
         Server(int port, std::string password);
@@ -17,6 +22,8 @@ class Server {
         int _port;
         int _num_clients;
         bool isExit;
+
+        std::vector<s_message> _messages;
 
         s_socket _server;
         s_socket _client;
@@ -30,6 +37,8 @@ class Server {
         void socket_polling();
         void connect();
         void read_client();
+        void send_message();
+        void execute(std::string &message);
 
 
         //pollfd _pollfds[SOMAXCONN];
