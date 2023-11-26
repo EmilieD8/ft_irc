@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/23 10:58:19 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/17 11:41:01 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/11/26 12:55:27 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,4 +32,5 @@
 #include <sstream>
 
 #include "Server.hpp"
+#include "Message.hpp"
 

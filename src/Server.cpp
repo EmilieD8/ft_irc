@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42.fr>            +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/24 14:44:02 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/26 15:27:18 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,48 +116,78 @@ void Server::connect() {
 void Server::read_client()
 {
     std::vector<pollfd> &connectionFds = *_pollfds;
-    static std::string buffer;
+    static std::string completeMessage;
+    memset(&completeMessage, '\0', sizeof(completeMessage));
 
     for (int i = 1; i <= _num_clients; i++)
     {
         if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN)
         {
             std::cout << "Reading..." << std::endl;
-            char buf[4096];
-            memset(buf, 0, sizeof(buf));
-            int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
-            if (bytes > 0) {
-                std::string data(buf, bytes);
-                std::cout << "Received: " << data << std::endl;
-
-                /* Tried to answer pong when PING is entered, not sure if answer is in correct format */
-                if (data.compare(0, 4, "PING") == 0)
-                {
-                    std::cout << "PING received" << std::endl;
-                    // Extract the parameter from the PING message
-                    std::string pingParameter = data.substr(5);
-
-                    // Respond with a PONG message
-                    std::string pongMessage = "PONG :" + pingParameter + "\r\n";
-                    send(connectionFds[i].fd, pongMessage.c_str(), pongMessage.size(), 0);
-                }
-            }
-            if (bytes == -1)
+            while (!bufferEndMessage(completeMessage))
             {
-                if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                    // No data available, continue to the next client
-                    continue;
-                }
-                else
-                    throw std::runtime_error("Error reading inside loop");
+                // try
+                // {
+                    readMessage(buf, completeMessage);
+                // }
+                // catch(const std::exception& e)
+                // {
+                //     std::cerr << e.what() << '\n';
+                // }
             }
-            if (bytes == 0)
-                throw std::runtime_error("Error in the reading, bytes == 0");
-
-            buffer += buf;
-            execute(buffer);
-        }
+            Message::execMessage(completeMessage);
+        
     }
+}
+}
+
+int    Server::bufferEndMessage(std::string completeMessage)
+{
+    size_t found = completeMessage.find( "\r\n", 0 );
+    if (found == std::string::npos)
+    {
+        return (1);
+    }
+    else
+        return (0);
+}
+std::string Server::readMessage(std::string completeMessage)
+{
+    char *buf[4096];
+    memset(buf, 0, sizeof(buf));
+    int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
+    if (bytes > 0) 
+    {
+        completeMessage += buf;
+        // std::string data(buf, bytes);
+        // std::cout << "Received: " << data << std::endl;
+        
+        // /* Tried to answer pong when PING is entered, not sure if answer is in correct format */
+        // if (data.compare(0, 4, "PING") == 0)
+        // {
+        //     std::cout << "PING received" << std::endl;
+        //     // Extract the parameter from the PING message
+        //     std::string pingParameter = data.substr(5);
+
+        //     // Respond with a PONG message
+        //     std::string pongMessage = "PONG :" + pingParameter + "\r\n";
+        //     send(connectionFds[i].fd, pongMessage.c_str(), pongMessage.size(), 0);
+        // }
+    }
+    if (bytes == -1)
+    {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            // No data available, continue to the next client
+            throw std::runtime_error("Error nothing to read anymore");
+        }
+        else
+            throw std::runtime_error("Error reading inside loop");
+    }
+    if (bytes == 0)
+        throw std::runtime_error("Error in the reading, bytes == 0");
+}
+
+    
 }
 
 void Server::launchServer() {
@@ -172,7 +202,7 @@ void Server::launchServer() {
 		try {
             socket_polling();
             connect();
-            send_message();
+            // send_message();
             read_client();
         }
         catch (std::exception &e) {
@@ -183,22 +213,22 @@ void Server::launchServer() {
 }
 
 /* That was in mcombeaus repo, not sure what it does... */
-void Server::send_message() {
-    std::vector<pollfd> &connectionFds = *_pollfds;
+// void Server::send_message() {
+//     std::vector<pollfd> &connectionFds = *_pollfds;
 
-    for (std::vector<s_message>::iterator it = _messages.begin(); it != _messages.end(); it++) {
-        const s_message &message = *it;
-        int index = -1;
-        for (int i = 1; i <= _num_clients; i++) {
-            if (connectionFds[i].fd == message.fd) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-            throw std::runtime_error("Error sending message");
-    }
-}
+//     for (std::vector<s_message>::iterator it = _messages.begin(); it != _messages.end(); it++) {
+//         const s_message &message = *it;
+//         int index = -1;
+//         for (int i = 1; i <= _num_clients; i++) {
+//             if (connectionFds[i].fd == message.fd) {
+//                 index = i;
+//                 break;
+//             }
+//         }
+//         if (index == -1)
+//             throw std::runtime_error("Error sending message");
+//     }
+// }
 
 /* Function to execute the command, atm just splitting it but not doing anything */
 void Server::execute(std::string &message) {
