@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/26 15:27:18 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/11/26 16:26:52 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,65 +116,68 @@ void Server::connect() {
 void Server::read_client()
 {
     std::vector<pollfd> &connectionFds = *_pollfds;
-    static std::string completeMessage;
-    memset(&completeMessage, '\0', sizeof(completeMessage));
 
     for (int i = 1; i <= _num_clients; i++)
     {
         if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN)
         {
-            std::cout << "Reading..." << std::endl;
+            static std::string completeMessage;
+            memset(&completeMessage, '\0', sizeof(completeMessage));
+            std::cout << "Reading... here" << std::endl;
             while (!bufferEndMessage(completeMessage))
             {
                 // try
                 // {
-                    readMessage(buf, completeMessage);
-                // }
-                // catch(const std::exception& e)
-                // {
-                //     std::cerr << e.what() << '\n';
-                // }
-            }
-            Message::execMessage(completeMessage);
-        
+                    // std::cout << " Beg Complete Message is " << completeMessage << std::endl;
+                    // completeMessage = readMessage(completeMessage, connectionFds[i]);
+                    // std::cout << " End Complete Message is " << completeMessage << std::endl; 
+
+                    //==> no idea why but if this is in another function, it just does not work anymore 
+                char buf[10]; // test --> to be put to 4096
+                memset(buf, 0, sizeof(buf));
+                int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
+                if (bytes > 0) 
+                    completeMessage += std::string(buf, bytes);
+                else if (bytes == -1)
+                {
+                    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                        // No data available, continue to the next client
+                        throw std::runtime_error("Error nothing to read anymore");
+                    }
+                    else
+                        throw std::runtime_error("Error reading inside loop");
+                }
+                else if (bytes == 0)
+                    throw std::runtime_error("Error in the reading, bytes == 0");
+                }
+                Message::execMessage(completeMessage);
+                std::cout << "next client connection \n" << std::endl;
+        }
     }
-}
 }
 
 int    Server::bufferEndMessage(std::string completeMessage)
 {
-    size_t found = completeMessage.find( "\r\n", 0 );
-    if (found == std::string::npos)
-    {
-        return (1);
-    }
-    else
-        return (0);
+    size_t found = completeMessage.find("test");
+    if (found != std::string::npos)
+        std::cout << "found " << std::endl;
+    return (found != std::string::npos) ? 1 : 0;
 }
-std::string Server::readMessage(std::string completeMessage)
+
+std::string Server::readMessage(std::string completeMessage, const pollfd &connectionFds)
 {
-    char *buf[4096];
+    std::cout << "Entering readMessage" << std::endl;
+    char buf[10]; // test --> to be put to 4096
     memset(buf, 0, sizeof(buf));
-    int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
+    int bytes = recv(connectionFds.fd, buf, sizeof(buf), 0);
     if (bytes > 0) 
     {
-        completeMessage += buf;
-        // std::string data(buf, bytes);
-        // std::cout << "Received: " << data << std::endl;
-        
-        // /* Tried to answer pong when PING is entered, not sure if answer is in correct format */
-        // if (data.compare(0, 4, "PING") == 0)
-        // {
-        //     std::cout << "PING received" << std::endl;
-        //     // Extract the parameter from the PING message
-        //     std::string pingParameter = data.substr(5);
-
-        //     // Respond with a PONG message
-        //     std::string pongMessage = "PONG :" + pingParameter + "\r\n";
-        //     send(connectionFds[i].fd, pongMessage.c_str(), pongMessage.size(), 0);
-        // }
+        completeMessage += std::string(buf, bytes);
+        std::cout << "Received: " << buf << std::endl;
+        std::cout << "Message is now : " << completeMessage << std::endl;
+        return (completeMessage);
     }
-    if (bytes == -1)
+    else if (bytes == -1)
     {
         if (errno == EWOULDBLOCK || errno == EAGAIN) {
             // No data available, continue to the next client
@@ -183,11 +186,10 @@ std::string Server::readMessage(std::string completeMessage)
         else
             throw std::runtime_error("Error reading inside loop");
     }
-    if (bytes == 0)
+    else if (bytes == 0)
         throw std::runtime_error("Error in the reading, bytes == 0");
-}
-
-    
+    std::cout << "return";
+    return (completeMessage);
 }
 
 void Server::launchServer() {
