@@ -39,6 +39,7 @@ class Server {
         void read_client();
         void send_message();
         void execute(std::string &message);
+        void splitBuf(std::string buf, int fd);
 
 
         //pollfd _pollfds[SOMAXCONN];

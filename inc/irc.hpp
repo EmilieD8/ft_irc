@@ -32,4 +32,6 @@
 #include <sstream>
 
 #include "Server.hpp"
+#include "Message.hpp"
 
+#define BUFFER_SIZE 512
