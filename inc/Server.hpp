@@ -6,10 +6,7 @@ struct s_socket {
     struct sockaddr_in addr;
 };
 
-struct s_message {
-    std::string message;
-    int fd;
-};
+class User;
 
 class Server {
     public:
@@ -17,13 +14,19 @@ class Server {
         ~Server();
         Server(Server const & src);
         Server & operator=(Server const & src);
+
+        std::vector<User> &get_clients();
+
         void launchServer();
+        std::string get_password() const;
+        void set_exit_status(bool status);
+
     private:
         int _port;
         int _num_clients;
         bool isExit;
 
-        std::vector<s_message> _messages;
+        std::vector<User> _clients;
 
         s_socket _server;
         s_socket _client;
@@ -39,19 +42,10 @@ class Server {
         void read_client();
         void send_message();
         void execute(std::string &message);
-        void splitBuf(std::string buf, int fd);
+        void splitBuf(std::string buf, int fd, Server &server);
 
 
-        //pollfd _pollfds[SOMAXCONN];
         pollfd connectionFds[SOMAXCONN];
-        /* it's a certain type of vector, type pollfd and
-        it contains this struct 
-        struct pollfd 
-        {
-               int   fd;         file descriptor
-               short events;    requested events
-               short revents;    returned events
-        };*/
         const static int maxClients = SOMAXCONN;
 
 };

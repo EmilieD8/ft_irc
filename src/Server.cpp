@@ -29,6 +29,9 @@ Server::Server(Server const & src) {
     *this = src;
 }
 
+void Server::set_exit_status(bool status) {
+    isExit = status;
+}
 Server & Server::operator=(Server const & src) {
     if (this != &src) {
         _port = src._port;
@@ -36,6 +39,14 @@ Server & Server::operator=(Server const & src) {
         _password = src._password;
     }
     return *this;
+}
+
+std::string Server::get_password() const {
+    return _password;
+}
+
+std::vector<User> &Server::get_clients() {
+    return _clients;
 }
 
 void Server::init() {
@@ -75,42 +86,31 @@ void Server::socket_polling() {
 
 void Server::connect() {
     std::vector<pollfd> &connectionFds = *_pollfds;
+    static int id = 1;
+    int new_connection;
     if (!(connectionFds[0].revents & POLLIN))
         return;
 
     socklen_t size = sizeof(_client.addr);
 
-    _client.fd = accept(_server.fd, (struct sockaddr *) &_client.addr, &size);
-    if (_client.fd == -1)
+    new_connection = accept(_server.fd, (struct sockaddr *) &_client.addr, &size);
+    if (new_connection == -1)
         throw std::runtime_error("Accepting failed");
 
-    int setting = fcntl(_client.fd, F_GETFL, 0);
-    fcntl(_client.fd, F_SETFL, setting | O_NONBLOCK);
+    int setting = fcntl(new_connection, F_GETFL, 0);
+    fcntl(new_connection, F_SETFL, setting | O_NONBLOCK);
 
     if (_num_clients == maxClients)
         throw std::runtime_error("Too many clients");
 
-//	char buffer[4096];
-//	int receive = recv(_client.fd, buffer, 4096, 0);
-//	if (receive < 0)
-//		throw std::runtime_error("Receive error");
-//	std::istringstream iss(buffer);
-//	std::string line;
-//	while (std::getline(iss, line)) {
-//		std::cout << " line is :" << line << std::endl;
-//		if (line.compare(0, 5, "PASS ") == 0) {
-//			std::string password = line.substr(5, line.size() - 6);
-//			if (password.compare(_password) != 0) {
-//				throw std::runtime_error("Error wrong password");
-//				isExit = true;
-//				break;
-//		 }}}
 
-	connectionFds[_num_clients + 1].fd = _client.fd;
+	connectionFds[_num_clients + 1].fd = new_connection;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
 
-    // TODO: create a user
+    User *new_user = new User(new_connection, id);
+    _clients.push_back(*new_user);
     _num_clients++;
+    id++;
 }
 
 void Server::read_client()
@@ -135,24 +135,31 @@ void Server::read_client()
             else if (bytes == 0) {
                 throw std::runtime_error("Error in the reading, bytes == 0");
             }
-            splitBuf(buf, connectionFds[i].fd);
+            splitBuf(buf, connectionFds[i].fd, *this);
         }
     }
 }
 
-void Server::splitBuf(std::string buf, int fd)
+void Server::splitBuf(std::string buf, int fd, Server &server)
 {
     size_t start = 0;
     size_t end = buf.find("\r\n");
+    User user;
 
-    while (end != std::string::npos)
-    {
-        Message message(buf.substr(start, end - start));
+    for (std::vector<User>::iterator it = _clients.begin(); it != _clients.end(); it++) {
+        if (it->get_fd() == fd) {
+            user = *it;
+            break;
+        }
+    }
+    while (end != std::string::npos) {
+        std::string message(buf.substr(start, end - start));
         start = end + 2;
         end = buf.find("\r\n", start);
-        message.splitMessage(fd, &server);
+        user.splitMessage(fd, server, message);
     }
 }
+
 void Server::launchServer() {
     std::vector<pollfd> &connectionFds = *_pollfds;
     connectionFds[0].fd = _server.fd;
@@ -166,30 +173,12 @@ void Server::launchServer() {
             socket_polling();
             connect();
           //  send_message();
-          if (connectionFds[1].revents & POLLIN)
+       //   if (connectionFds[1].revents & POLLIN)
             read_client();
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
         }
-    }
-}
-
-/* That was in mcombeaus repo, not sure what it does... */
-void Server::send_message() {
-    std::vector<pollfd> &connectionFds = *_pollfds;
-
-    for (std::vector<s_message>::iterator it = _messages.begin(); it != _messages.end(); it++) {
-        const s_message &message = *it;
-        int index = -1;
-        for (int i = 1; i <= _num_clients; i++) {
-            if (connectionFds[i].fd == message.fd) {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-            throw std::runtime_error("Error sending message");
     }
 }
