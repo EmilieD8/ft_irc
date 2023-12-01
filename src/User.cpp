@@ -68,12 +68,12 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "/JOIN", "/KICK", "/INVITE", "/CHANNEL", "/CAP", "/PASS", "/NICK", "/USER", "PING","CAP", "/INVALID" };
+    std::string type[] = {"PASS", "NICK", "USER", "/JOIN", "/KICK", "/INVITE", "/CHANNEL", "CAP", "/PASS", "/NICK", "/USER", "PING", "/INVALID" };
     //   TODO : replace also the command by their digit codes
     int count = 0;
     std::cout << "Command : " << _message._command << std::endl;
     //TODO check the right size of the array
-    for (int i = 0; i < 13; i++){
+    for (int i = 0; i < 12; i++){
         if (_message._command.compare(type[i]) != 0)
             count++;
         else
@@ -117,10 +117,10 @@ void User::parseMessage(Server &server) {
             break;
         case 11:
             command_ping(server, this->_message);
-        case 12:
-            break;
         case 13:
-            std::cout << "Error: invalid command" << std::endl; // TODO : double check
+            std::cout << "Error: invalid command" << std::endl;
+            break;
+            // TODO : double check
     }
     //TODO
 }
