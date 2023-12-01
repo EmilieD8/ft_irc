@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mschaub <mschaub@student.42.fr>            +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/11/24 14:44:02 by mschaub          ###   ########.fr       */
+/*   Updated: 2023/11/28 18:12:10 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -150,7 +150,7 @@ void Server::splitBuf(std::string buf, int fd)
         Message message(buf.substr(start, end - start));
         start = end + 2;
         end = buf.find("\r\n", start);
-        message.splitMessage(fd);
+        message.splitMessage(fd, &server);
     }
 }
 void Server::launchServer() {

@@ -11,8 +11,9 @@ class Message {
         ~Message();
         Message(Message const & src);
         Message & operator=(Message const & src);
-        void splitMessage(int fd);
+        void splitMessage(int fd, Server& server);
         void parseMessage();
+        void passwordCheck();
     private:
         std::string _fullStr;
         std::string _prefix;

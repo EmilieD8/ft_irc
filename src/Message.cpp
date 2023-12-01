@@ -29,7 +29,7 @@ Message &Message::operator=(Message const & src) {
     return *this;
 }
 
-void Message::splitMessage(int fd) {
+void Message::splitMessage(int fd, Server &server) {
     std::stringstream ss(_fullStr);
     std::string word;
     int count;
@@ -53,10 +53,10 @@ void Message::splitMessage(int fd) {
 //    std::cout << "Command : " << _command << std::endl;
 //    std::cout << "Params : " << _params << std::endl;
 
-    parseMessage();
+    parseMessage(server);
 }
 
-void Message::parseMessage() {
+void Message::parseMessage(Server &server) {
     std::string type[] = {"PASS", "NICK", "USER", "/JOIN", "/KICK", "/INVITE", "/CHANNEL", "/CAP", "/PASS", "/NICK", "/USER", "/INVALID"};
     //   TODO : replace also the command by their digit codes
     int count = 0;
@@ -71,7 +71,7 @@ void Message::parseMessage() {
     std::cout << count << std::endl;
     switch (count) {
         case 0:
-            //TODO PASS
+            passwordCheck(server);
             break;
         case 1:
             //TODO NICK
@@ -107,8 +107,10 @@ void Message::parseMessage() {
             throw std::runtime_error("Error: invalid command");
     }
     //TODO
-};
+}
 
-void Message::pass() {
-    //TODO
-};
+void Message::passwordCheck(Server &server) 
+{
+    std::cout << "password function checked" << std::endl;
+    std::cout << server._password << std::endl;
+}
