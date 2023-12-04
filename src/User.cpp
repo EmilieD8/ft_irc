@@ -28,6 +28,7 @@ int User::get_id() const {
 }
 
 std::string User::get_nick() const {
+   // std::cout << "nick in get nick " << _nick << std::endl;
     return _nick;
 }
 
@@ -37,6 +38,20 @@ std::string User::get_name() const {
 
 std::string User::get_pw() const {
     return _pw;
+}
+
+void User::set_channel_atm(Channel* channel) {
+    _channel_atm = channel;
+}
+
+Channel* User::get_channel_atm() const {
+    return _channel_atm;
+}
+
+void User::set_nick(std::string nick) {
+    //std::cout << "Setting nickname to: " << nick << std::endl;
+    _nick = nick;
+    //std::cout << " nick is now " << _nick << std::endl;
 }
 
 
@@ -68,12 +83,12 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "/JOIN", "/KICK", "/INVITE", "/CHANNEL", "CAP", "/PASS", "/NICK", "/USER", "PING", "/INVALID" };
+    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CHANNEL", "CAP", "PING", "/INVALID" };
     //   TODO : replace also the command by their digit codes
     int count = 0;
     std::cout << "Command : " << _message._command << std::endl;
     //TODO check the right size of the array
-    for (int i = 0; i < 12; i++){
+    for (int i = 0; i < 9; i++){
         if (_message._command.compare(type[i]) != 0)
             count++;
         else
@@ -92,7 +107,7 @@ void User::parseMessage(Server &server) {
             //TODO check if we need bool or not and check both nickname and user name
             break;
         case 3:
-            //TODO JOIN
+            command_join(server, this->_message);
             break;
         case 4:
             //TODO KICK
@@ -107,22 +122,13 @@ void User::parseMessage(Server &server) {
             //TODO CAP
             break;
         case 8:
-            //TODO /PASS
+            command_ping(server, this->_message);
             break;
         case 9:
-            //TODO /NICK
-            break;
-        case 10:
-            //TODO /USER
-            break;
-        case 11:
-            command_ping(server, this->_message);
-        case 13:
             std::cout << "Error: invalid command" << std::endl;
             break;
             // TODO : double check
     }
-    //TODO
 }
 
 void User::passwordCheck(Server &server) {
@@ -135,24 +141,31 @@ void User::passwordCheck(Server &server) {
     }
     else
         std::cout << "password is correct" << std::endl;
-    // maybe create a while loop to give three more tries to connect with the right password
+    // TODO: maybe create a while loop to give three more tries to connect with the right password
 }
 
 bool User::command_nick(Server &server, s_message &message) {
     std::cout << "command_nick function checked" << std::endl;
-    // nick has to be unique -> loop through vector list to check
-    //
+    // TODO : if user already taken at first instance, then change the username with a special symbol.
+    //TODO : check if nickname changes works
+    //TODO : chekc if proper error messages sent
     std::string new_nick = message._params;
-   // TODO : check if the nickname is empty
-    for (std::vector<User>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
-        if (it->get_nick().compare(new_nick) == 0) {
-            std::cout << "Error: nickname already taken" << std::endl;
-            //TODO send error message
+    std::string old = get_nick();
+        if (new_nick.empty()) {
+            send(_fd, ERR_NONICKNAMEGIVEN(message._command).c_str(), ERR_NONICKNAMEGIVEN(message._command).size(), 0);
             return false;
         }
-    }
-    _nick = new_nick;
-    send(_fd, NICK(_nick, new_nick).c_str(), NICK(_nick, new_nick).size(), 0);
+        std::vector <User> clients = server.get_clients();
+        for (std::vector<User>::iterator it = clients.begin(); it != clients.end(); it++) {
+            if (it->get_nick().compare(new_nick) == 0) {
+                send(_fd, ERR_NICKNAMEINUSE(message._command, new_nick).c_str(),
+                     ERR_NICKNAMEINUSE(message._command, new_nick).size(), 0);
+                return false;
+            }
+        }
+        //std::cout << NICK(old, new_nick) << std::endl;
+    set_nick(new_nick);
+    send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
     return true;
 }
 
@@ -194,4 +207,32 @@ void User::command_ping(Server &server, s_message &message) {
     }
     else
         send(_fd, PONG(_message._params).c_str(), PONG(_message._params).size(), 0);
+}
+
+
+/*
+ * TODO:
+ * check if channel already exists or otherwise create it
+ * proper name? Test vs #Test
+ */
+
+void User::command_join(Server &server, s_message &message) {
+    std::cout << "command_join function checked" << std::endl;
+    for (std::vector<Channel>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if (it->get_name() == message._params) {
+            it->add_user(*this);
+            set_channel_atm(&(*it));
+            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).c_str(),
+                 JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).size(), 0);
+        } else {
+            Channel *channel = new Channel(message._params, *this);
+            //channel->add_user(*this);
+            server.get_channels().push_back(*channel);
+            set_channel_atm(channel);
+            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).c_str(),
+                 JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).size(), 0);
+        }
+    }
+    server.print_channels();
+    //send(_fd, RPL_TOPIC(channel->get_name(), channel->get_topic()).c_str(), RPL_TOPIC(channel->get_name(), channel->get_topic()).size(), 0);
 }

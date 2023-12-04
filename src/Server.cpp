@@ -17,6 +17,7 @@ Server::Server(int port, std::string password) {
     _name = "Lit Server";
     _password = password;
 	isExit = false;
+
     init();
 }
 
@@ -47,6 +48,10 @@ std::string Server::get_password() const {
 
 std::vector<User> &Server::get_clients() {
     return _clients;
+}
+
+std::vector<Channel> &Server::get_channels() {
+    return _channels;
 }
 
 void Server::init() {
@@ -140,23 +145,20 @@ void Server::read_client()
     }
 }
 
-void Server::splitBuf(std::string buf, int fd, Server &server)
-{
+void Server::splitBuf(std::string buf, int fd, Server &server) {
     size_t start = 0;
     size_t end = buf.find("\r\n");
-    User user;
 
     for (std::vector<User>::iterator it = _clients.begin(); it != _clients.end(); it++) {
         if (it->get_fd() == fd) {
-            user = *it;
-            break;
+            while (end != std::string::npos) {
+            std::string message(buf.substr(start, end - start));
+            start = end + 2;
+            end = buf.find("\r\n", start);
+            it->splitMessage(fd, server, message);
         }
-    }
-    while (end != std::string::npos) {
-        std::string message(buf.substr(start, end - start));
-        start = end + 2;
-        end = buf.find("\r\n", start);
-        user.splitMessage(fd, server, message);
+        break;
+        }
     }
 }
 
@@ -179,6 +181,23 @@ void Server::launchServer() {
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
             exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void Server::print_channels() {
+    std::cout << "Printing channels" << std::endl;
+    for (std::vector<Channel>::iterator channel = get_channels().begin(); channel != get_channels().end(); ++channel) {
+        std::cout << "Channel name: " << channel->get_name() << std::endl;
+        std::cout << "Channel users: " << std::endl;
+
+        std::vector<User>& users = channel->get_users();
+        if (users.empty()) {
+            std::cout << "No users in this channel" << std::endl;
+        } else {
+            for (std::vector<User>::const_iterator user = users.begin(); user != users.end(); ++user) {
+                std::cout << "User name: " << user->get_name() << std::endl;
+            }
         }
     }
 }

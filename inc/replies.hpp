@@ -12,3 +12,9 @@
 # define PONG(server) ("PONG :" + server + "\r\n")
 
 # define ERR_NOORIGIN(command) (command + ":No origin specified")
+
+# define JOIN(nick, user, host, channel) (":" + nick + "!" + user + "@" + host  + " JOIN " + channel + "\r\n")
+
+# define ERR_NONICKNAMEGIVEN(command) (command + ":No nickname given")
+
+# define ERR_NICKNAMEINUSE(command, nick) (command + nick + " :Nickname is already in use\r\n")

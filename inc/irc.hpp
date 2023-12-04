@@ -34,5 +34,6 @@
 #include "Server.hpp"
 #include "User.hpp"
 #include "replies.hpp"
+#include "Channel.hpp"
 
 #define BUFFER_SIZE 512
