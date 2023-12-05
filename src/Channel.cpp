@@ -24,6 +24,7 @@ Channel &Channel::operator=(Channel const &src) {
 
 void Channel::add_user(User &user) {
     _users.push_back(user);
+    std::cout << "user added to the channel" << std::endl;
 }
 
 void Channel::remove_user(User &user) {
