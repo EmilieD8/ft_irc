@@ -18,3 +18,5 @@
 # define ERR_NONICKNAMEGIVEN(command) (command + ":No nickname given")
 
 # define ERR_NICKNAMEINUSE(command, nick) (command + nick + " :Nickname is already in use\r\n")
+
+# define ERR_NOTONCHANNEL(chan) (chan + " :You're not on that channel\r\n")

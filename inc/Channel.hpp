@@ -6,7 +6,6 @@ class User;
 class Channel {
     public:
         Channel(std::string name);
-        Channel(std::string name, User &user);
         ~Channel();
         Channel(Channel const & src);
         Channel & operator=(Channel const & src);
@@ -16,9 +15,15 @@ class Channel {
         void set_topic(std::string topic);
         std::string get_name() const;
         std::string get_topic() const;
-        std::vector<User> &get_users() ;
+        std::vector<User> &get_users();
     private:
         std::string _name;
         std::string _topic;
         std::vector<User> _users;
+        bool _isInviteOnly;
+        bool _topicRestricted;
+        bool _keySet;
+        std::string password;
+        int _limit;
+        bool _limitSet;
 };

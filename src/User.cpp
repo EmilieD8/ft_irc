@@ -2,9 +2,13 @@
 
 User::User() {}
 
-User::User(int fd, int id) : _fd(fd), id(id), isOperator(false) {}
+User::User(int fd, int id) : _fd(fd), id(id), isOperator(false) {
+    _isInAChannel = false;
+}
 
-User::~User() {}
+User::~User() {
+    delete this;
+}
 
 User::User(User const &src) {
     *this = src;
@@ -33,6 +37,7 @@ std::string User::get_nick() const {
 }
 
 std::string User::get_name() const {
+    std::cout << "name user : " << _name << std::endl;
     return _name;
 }
 
@@ -40,12 +45,14 @@ std::string User::get_pw() const {
     return _pw;
 }
 
-void User::set_channel_atm(Channel* channel) {
-    _channel_atm = channel;
+void User::set_channel_atm(Channel& channel) {
+    _channels_atm.push_back(channel);
+    _channel_rn = channel;
+    _isInAChannel = true;
 }
 
-Channel* User::get_channel_atm() const {
-    return _channel_atm;
+std::vector<Channel> User::get_channel_atm() const {
+    return _channels_atm;
 }
 
 void User::set_nick(std::string nick) {
@@ -83,18 +90,18 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CHANNEL", "CAP", "PING", "/INVALID" };
+    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "/INVALID"};
     //   TODO : replace also the command by their digit codes
     int count = 0;
+    size_t arraySize = sizeof(type) / sizeof(type[0]);
     std::cout << "Command : " << _message._command << std::endl;
-    //TODO check the right size of the array
-    for (int i = 0; i < 9; i++){
+    for (int i = 0; i < arraySize; i++){
         if (_message._command.compare(type[i]) != 0)
             count++;
         else
             break;
     }
-    std::cout << "count : " << count << std::endl;
+    // std::cout << "count : " << count << std::endl;
     switch (count) {
         case 0:
             passwordCheck(server);
@@ -116,15 +123,17 @@ void User::parseMessage(Server &server) {
             //TODO INVITE
             break;
         case 6:
-            //TODO CHANNEL
-            break;
-        case 7:
             //TODO CAP
             break;
-        case 8:
+        case 7:
             command_ping(server, this->_message);
             break;
+        case 8:
+            //TODO : MODE
+            break;
         case 9:
+            command_topic(server, this->message);
+        case 10:
             std::cout << "Error: invalid command" << std::endl;
             break;
             // TODO : double check
@@ -214,38 +223,73 @@ void User::command_ping(Server &server, s_message &message) {
  * TODO:
  * check if channel already exists or otherwise create it
  * proper name? Test vs #Test
+ * Test if a user is already in that channel -> should not be added twice
+ * different modes ONLY FOR CHANNELS OPERATORS:
+ * format : 
+ * /mode #channel +t => +t (topic): When set, only channel operators can change the channel topic.
+ * /mode #channel +i => Set/remove Invite-only channel
+ * /mode #channel +k password => k: Set/remove the channel key (password)
+ * /mode #channel +o nickname => o: Give/take channel operator privilege
+ * /mode #channel +l limit => l: Set/remove the user limit to channel
  */
 
 void User::command_join(Server &server, s_message &message) {
     std::cout << "command_join function checked" << std::endl;
-    // for (std::vector<Channel>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
-    //     if (it->get_name() == message._params) {
-    //         std::cout << "Channel exists already" << std::endl;
-    //         it->add_user(*this);
-    //         set_channel_atm(&(*it));
-    //         send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).c_str(),
-    //              JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).size(), 0);
-    //     break;
-    //     } else {
-
-            // std::cout << "Channel does not exist already" << std::endl;
-            Channel *channel = new Channel(message._params);
-            std::cout << "Users before adding: " << channel->get_users().size() << std::endl;
-            channel->add_user(*this);
-            std::cout << "Users after adding: " << channel->get_users().size() << std::endl;
-            // server.get_channels().push_back(*channel);
-            // set_channel_atm(channel);
-            // send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).c_str(),
-            //      JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).size(), 0);
-        // }
-
-        // Print users in the channel
-std::cout << "Users in channel " << channel->get_name() << ": ";
-for (const auto &user : channel->get_users()) {
-    std::cout << user.get_name() << " ";
+    // test if channel exists already
+    int i = 0;
+    for (std::vector<Channel>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if (it->get_name() == message._params) {
+            std::cout << "Channel exists already" << std::endl;
+            it->add_user(*this);
+            set_channel_atm(*it);
+            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).c_str(),
+                 JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).size(), 0);
+            break;
+        } 
+        else
+            i++;
+    }
+    if (i == server.get_channels().size())
+    {
+        std::cout << "Channel does not exist already" << std::endl;
+        Channel *channel = new Channel(message._params);
+        channel->add_user(*this);
+        server.get_channels().push_back(*channel);
+        set_channel_atm(*channel);
+        send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).c_str(),
+                JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).size(), 0);
+    }
+    //server.print_channels();
+    
 }
-std::cout << std::endl;
-    // }
-    server.print_channels();
-    //send(_fd, RPL_TOPIC(channel->get_name(), channel->get_topic()).c_str(), RPL_TOPIC(channel->get_name(), channel->get_topic()).size(), 0);
+
+void User::command_topic(Server &server, s_message &message) {
+/*
+ TODO:
+ format : TOPIC #channel :New Topic 
+- check if the user is in that channel atm otherwise fail - error ERR_NOTONCHANNEL 
+- check if the flag mode -t is set otherwise no if user is not operator
+- change the topic and send a message
+- if does not contain a param <topic>, then just return the current topic of the channel.
+RPL_NOTOPIC
+                        "<channel> :No topic is set"
+        332     RPL_TOPIC
+                        "<channel> :<topic>"
+
+                - When sending a TOPIC message to determine the
+                  channel topic, one of two replies is sent.  If
+                  the topic is set, RPL_TOPIC is sent back else
+                  RPL_NOTOPIC.
+
+*/
+
+if (_isInAChannel == true)
+{
+
 }
+else
+    send(_fd, ERR_NOTONCHANNEL().c_str, ERR_NOTONCHANNEL())
+
+}
+
+    // send(_fd, RPL_TOPIC(channel->get_name(), channel->get_topic()).c_str(), RPL_TOPIC(channel->get_name(), channel->get_topic()).size(), 0);
