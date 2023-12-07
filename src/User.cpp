@@ -2,8 +2,10 @@
 
 User::User() {}
 
-User::User(int fd, int id) : _fd(fd), id(id), isOperator(false) {
+User::User(int fd, int id) : _fd(fd), id(id)  {
     _isInAChannel = false;
+    _channel_rn = NULL;
+    _isOperator =false;
 }
 
 User::~User() {
@@ -18,7 +20,7 @@ User &User::operator=(User const &src) {
     if (this != &src) {
         _fd = src._fd;
         id = src.id;
-        isOperator = src.isOperator;
+        //isOperator = src.isOperator;
     }
     return *this;
 }
@@ -132,7 +134,7 @@ void User::parseMessage(Server &server) {
             //TODO : MODE
             break;
         case 9:
-            command_topic(server, this->message);
+            command_topic(server, this->_message);
         case 10:
             std::cout << "Error: invalid command" << std::endl;
             break;
