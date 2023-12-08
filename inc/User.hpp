@@ -46,7 +46,7 @@ class User {
         std::string _pw;
         s_message _message;
         std::vector<Channel> _channels_atm; // should be a map with a channel - operator status
-        Channel &_channel_rn;
+        Channel *_channel_rn;
         bool _isInAChannel;
         bool _isOperator; // map to have operator of a specific channel ?
 };

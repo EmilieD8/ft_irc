@@ -1,6 +1,10 @@
 #include "../inc/irc.hpp"
 
-User::User() {}
+User::User() {
+    _isInAChannel = false;
+    _channel_rn = NULL;
+    _isOperator =false;
+}
 
 User::User(int fd, int id) : _fd(fd), id(id)  {
     _isInAChannel = false;
@@ -9,7 +13,7 @@ User::User(int fd, int id) : _fd(fd), id(id)  {
 }
 
 User::~User() {
-    delete this;
+   // delete this; ==> segfault
 }
 
 User::User(User const &src) {
@@ -20,7 +24,6 @@ User &User::operator=(User const &src) {
     if (this != &src) {
         _fd = src._fd;
         id = src.id;
-        //isOperator = src.isOperator;
     }
     return *this;
 }
@@ -49,7 +52,7 @@ std::string User::get_pw() const {
 
 void User::set_channel_atm(Channel& channel) {
     _channels_atm.push_back(channel);
-    _channel_rn = channel;
+    _channel_rn = &channel;
     _isInAChannel = true;
 }
 
@@ -135,6 +138,7 @@ void User::parseMessage(Server &server) {
             break;
         case 9:
             command_topic(server, this->_message);
+            break;
         case 10:
             std::cout << "Error: invalid command" << std::endl;
             break;
@@ -174,7 +178,6 @@ bool User::command_nick(Server &server, s_message &message) {
                 return false;
             }
         }
-        //std::cout << NICK(old, new_nick) << std::endl;
     set_nick(new_nick);
     send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
     return true;
@@ -284,14 +287,44 @@ RPL_NOTOPIC
                   RPL_NOTOPIC.
 
 */
+    if (_isInAChannel == true)
+    {
+        if (_channel_rn->get_topicRestricted() == true)
+        {
+            std::cout << "topic is restricted"
+            // check if user is modo or not 
+        }
+        else
+        {
+            std::stringstream ss(message._params);
+            std::string word;
+            std::string nameTopic;
+            int count = 0;
 
-if (_isInAChannel == true)
-{
-
+            while (ss >> word) {
+                if (count == 1)
+                {
+                    if (word[0] == ':')
+                        nameTopic = word.substr(1, word.length());
+                    else
+                        nameTopic = word;
+                }
+                else
+                    nameTopic += " " + word;
+                count++;
+            }
+            if (_isInAChannel == true)
+            {
+                std::cout << "test IN" << std::endl;
+                send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).size(), 0);
+            }
+            else
+            {
+                // TODO : it is supposed to send the error message bellow but I'm not in any channel and the message receives by irssi does not contain the channel name
+                //send(_fd, ERR_NOTONCHANNEL(_channel_rn->get_name()).c_str(), (ERR_NOTONCHANNEL( _channel_rn->get_name()).size()), 0);
+                std::cout << "Cannot use this command in that context" << std::endl;
+            }
+        }
+    }
+// parsing the message out of the params.
 }
-else
-    send(_fd, ERR_NOTONCHANNEL().c_str, ERR_NOTONCHANNEL())
-
-}
-
-    // send(_fd, RPL_TOPIC(channel->get_name(), channel->get_topic()).c_str(), RPL_TOPIC(channel->get_name(), channel->get_topic()).size(), 0);

@@ -58,3 +58,7 @@ std::string Channel::get_topic() const {
 std::vector<User> &Channel::get_users()  {
     return _users;
 }
+
+bool Channel::get_topicRestricted() const {
+    return _topicRestricted;
+}

@@ -15,6 +15,7 @@ class Channel {
         void set_topic(std::string topic);
         std::string get_name() const;
         std::string get_topic() const;
+        bool get_topicRestricted() const;
         std::vector<User> &get_users();
     private:
         std::string _name;
