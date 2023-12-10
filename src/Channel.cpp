@@ -1,6 +1,5 @@
 #include "../inc/Channel.hpp"
 
-
 Channel::Channel(std::string name): _name(name) {
     _isInviteOnly = false;
     _topicRestricted = false;
@@ -9,7 +8,7 @@ Channel::Channel(std::string name): _name(name) {
 }
 
 Channel::~Channel() {
-    delete this;
+   // delete this; 
 }
 
 Channel::Channel(Channel const &src) {
@@ -61,4 +60,20 @@ std::vector<User> &Channel::get_users()  {
 
 bool Channel::get_topicRestricted() const {
     return _topicRestricted;
+}
+
+void Channel::set_topicRestricted(bool topicRestricted) {
+    _topicRestricted = topicRestricted;
+}
+
+int Channel::get_userSize() const {
+    return _users.size();
+}
+
+bool Channel::get_limitSet() const {
+    return _limitSet;
+}
+
+int Channel::get_limit() const {
+    return _limit;
 }

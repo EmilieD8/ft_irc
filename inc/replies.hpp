@@ -19,6 +19,14 @@
 
 # define ERR_NICKNAMEINUSE(command, nick) (command + nick + " :Nickname is already in use\r\n")
 
-# define ERR_NOTONCHANNEL(chan) ("442 " + chan + " :You're not on that channel\r\n")
+# define ERR_NOTONCHANNEL(channel) ("442 " + channel + " :You're not on that channel\r\n")
 
-# define RPL_TOPIC(nick, user, host, chan, topic) ("332 " + nick + "!" + user + "@" + host + " " + chan + " :" + topic + "\r\n")
+# define RPL_TOPIC(nick, user, host, channel, topic) ("332 " + nick + "!" + user + "@" + host + " " + channel + " :" + topic + "\r\n")
+
+# define ERR_CHANOPRIVSNEEDED(channel) ("482 " + channel + " :You're not channel operator\r\n")
+
+# define RPL_NOTOPIC(nick, user, host, channel) ("331 " + nick + "!" + user + "@" + host + " " + channel + " :No topic is set\r\n")
+
+# define ERR_CHANNELISFULL(nick, channel) ("471 " + nick + " " + channel + " :Cannot join channel (+l)\r\n")
+
+#define MODE_CHANNELMSGWITHPARAM(channel, mode, param) (":localhost MODE #" + channel + " " + mode + " " + param + "\r\n")

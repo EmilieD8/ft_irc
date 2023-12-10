@@ -8,6 +8,15 @@ struct s_message {
     std::string _params;
 };
 
+struct s_flag
+{
+    char flag;
+    int sign; // 1 is +, 2 is -
+    bool isValid;
+    s_flag *next;
+    s_flag *prev;
+};
+
 class Channel;
 
 class User {
@@ -18,7 +27,6 @@ class User {
         User(User const & src);
         User & operator=(User const & src);
 
-        std::vector<Channel> get_channel_atm() const;
         void set_channel_atm(Channel& channel);
         int get_fd() const;
         int get_id() const;
@@ -26,11 +34,20 @@ class User {
         std::string get_name() const;
         std::string get_pw() const;
         void set_nick(std::string nick);
+        void setOperatorStatus(Channel *channel, bool isOperator);
+        bool get_operatorStatus(Channel *channel) const;
+
         bool command_nick(Server &server, s_message &message);
         bool command_user(Server &server, s_message &message);
         void command_topic(Server &server, s_message &message);
         void command_ping(Server &server, s_message &message);
         void command_join(Server &server, s_message &message);
+        void command_mode(Server &server, s_message &message);
+
+        s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
+        s_flag *parserOption(std::string flags);
+        void interpretMode(s_flag *parsed);
+
         void splitMessage(int fd, Server& server, std::string buf);
         void parseMessage(Server &server);
         void passwordCheck(Server &server);
@@ -45,8 +62,7 @@ class User {
         std::string _serverName;
         std::string _pw;
         s_message _message;
-        std::vector<Channel> _channels_atm; // should be a map with a channel - operator status
         Channel *_channel_rn;
         bool _isInAChannel;
-        bool _isOperator; // map to have operator of a specific channel ?
+        std::map<Channel*, bool> _operatorStatusMap;
 };
