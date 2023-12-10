@@ -18,6 +18,10 @@ class Channel {
 
         bool get_topicRestricted() const;
         void set_topicRestricted(bool topicRestricted);
+
+        bool get_inviteOnly() const;
+        void set_inviteOnly(bool isInviteOnly);
+
         int get_userSize() const;
         bool get_limitSet() const;
         std::vector<User> &get_users();
@@ -31,6 +35,6 @@ class Channel {
         bool _topicRestricted;
         bool _keySet;
         std::string password;
-        int _limit;
         bool _limitSet;
+        int _limit;
 };

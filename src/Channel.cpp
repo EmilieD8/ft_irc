@@ -66,6 +66,15 @@ void Channel::set_topicRestricted(bool topicRestricted) {
     _topicRestricted = topicRestricted;
 }
 
+bool Channel::get_inviteOnly() const {
+    return _isInviteOnly;
+}
+
+void Channel::set_inviteOnly(bool isInviteOnly) {
+    _isInviteOnly = isInviteOnly;
+}
+
+
 int Channel::get_userSize() const {
     return _users.size();
 }

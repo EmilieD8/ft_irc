@@ -46,7 +46,7 @@ class User {
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
         s_flag *parserOption(std::string flags);
-        void interpretMode(s_flag *parsed);
+        void interpretMode(s_flag *parsed, std::vector<std::string> options);
 
         void splitMessage(int fd, Server& server, std::string buf);
         void parseMessage(Server &server);
