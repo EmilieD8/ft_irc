@@ -9,12 +9,15 @@ class Channel {
         ~Channel();
         Channel(Channel const & src);
         Channel & operator=(Channel const & src);
+
         void add_user(User &user);
         void remove_user(User &user);
-        void set_name(std::string name);
-        void set_topic(std::string topic);
-        std::string get_name() const;
+
         std::string get_topic() const;
+        void set_topic(std::string topic);
+
+        std::string get_name() const;
+        void set_name(std::string name);
 
         bool get_topicRestricted() const;
         void set_topicRestricted(bool topicRestricted);
@@ -22,10 +25,20 @@ class Channel {
         bool get_inviteOnly() const;
         void set_inviteOnly(bool isInviteOnly);
 
-        int get_userSize() const;
         bool get_limitSet() const;
-        std::vector<User> &get_users();
+        void set_limitSet(bool limitSet);
+
         int get_limit() const;
+        void set_limit(int limit);
+
+        std::string get_password() const;
+        void set_password(std::string password);
+
+        bool get_keySet() const;
+        void set_keySet(bool key);
+        
+        std::vector<User> &get_users();
+        int get_userSize() const;
 
     private:
         std::string _name;
@@ -34,7 +47,7 @@ class Channel {
         bool _isInviteOnly;
         bool _topicRestricted;
         bool _keySet;
-        std::string password;
+        std::string _password;
         bool _limitSet;
         int _limit;
 };

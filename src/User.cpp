@@ -347,7 +347,7 @@ RPL_NOTOPIC
 }
 
 //  format : 
-//  * /mode #channel +t => +t (topic): When set, only channel operators can change the channel topic.
+//  * /mode #channel +t => +t (topic): When set, only channel operators can change the channel topic. 
 //  * /mode #channel +i => Set/remove Invite-only channel
 //  * /mode #channel +k password => k: Set/remove the channel key (password)
 //  * /mode #channel +o nickname => o: Give/take channel operator privilege
@@ -355,12 +355,18 @@ RPL_NOTOPIC
 
 void User::command_mode(Server &server, s_message &message) {
     std::cout << "command_mode function checked" << std::endl;
+
     if (_isInAChannel == false)
     {
         //is not in a channel, cannot use this command;
         std::cout << "Cannot use this command in that context" << std::endl;
         return;
     }
+    std::cout << "Beginning" << std::endl;
+    std::cout << "Topic: " << _channel_rn->get_topicRestricted() << std::endl;
+    std::cout << "Invite: " << _channel_rn->get_inviteOnly() << std::endl;
+    std::cout << "Limit: " << _channel_rn->get_limitSet() << " int : " << _channel_rn->get_limit() << std::endl;
+    std::cout << "Password: " << _channel_rn->get_keySet() << " word : " <<_channel_rn->get_password() << std::endl;
     if (get_operatorStatus(_channel_rn) == false)
     {
         send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
@@ -391,15 +397,22 @@ void User::command_mode(Server &server, s_message &message) {
     }
     interpretMode(parsed, optionsArray);
     
-    //after, delete all the flag struct
+    s_flag *currentFlag = parsed;
+    while (currentFlag != nullptr)
+    {
+        s_flag *nextFlag = currentFlag->next;
+        delete currentFlag;
+        currentFlag = nextFlag; 
+    }
+    std::cout << "\n\nEnd" << std::endl;
+    std::cout << "Topic: " << _channel_rn->get_topicRestricted() << std::endl;
+    std::cout << "Invite: " << _channel_rn->get_inviteOnly() << std::endl;
+    std::cout << "Limit: " << _channel_rn->get_limitSet() << " int : " << _channel_rn->get_limit() << std::endl;
+    std::cout << "Password: " << _channel_rn->get_keySet() << " word : " <<_channel_rn->get_password() << std::endl;
+
+    return;
 }
-        // s_flag *currentFlag = parsed;
-        // while (currentFlag != nullptr)
-        // {
-        //     std::cout << "Flag: " << currentFlag->flag << ", Sign: " << currentFlag->sign << 
-        //     ", isValid : " << currentFlag->isValid << std::endl;
-        //     currentFlag = currentFlag->next;
-        // }
+
 // unknown mode flag :         472     ERR_UNKNOWNMODE => let's return the list of mode that we can write
 //         221     RPL_UMODEIS
 
@@ -408,7 +421,6 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
     int i = 0; // iterator for the vector;
     while(parsed != nullptr)
     {
-        std::cout << "Flag: " << parsed->flag << ", Sign: " << parsed->sign << std::endl;
         if (parsed->flag == 't' && parsed->sign == 1)
         {
             if (_channel_rn->get_topicRestricted() == false)
@@ -449,45 +461,63 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
                 send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
             }
         }
-
-
-
         else if (parsed->flag == 'l' && parsed->sign == 1)
         {
-            
-            if (_channel_rn->get_inviteOnly() == false)
+            try
             {
-                _channel_rn->set_inviteOnly(true);
-                std::cout << "flag changed +i" << std::endl;
+                int limit = std::stoi(options[i]);
+                _channel_rn->set_limitSet(true);
+                _channel_rn->set_limit(limit);
                 // TODO : does not send the message to the server
                 send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                std::cout << "flag changed +l" << std::endl;
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
             }
             i++;
         }
-        else if (parsed->flag == 'i' && parsed->sign == 2)
+        else if (parsed->flag == 'l' && parsed->sign == 2)
         {
-            if (_channel_rn->get_inviteOnly() == true)
+            if (_channel_rn->get_limitSet() == true)
             {
-                _channel_rn->set_inviteOnly(false);
-                std::cout << "flag changed -i" << std::endl;
+                _channel_rn->set_limitSet(false);
+                std::cout << "flag changed -l" << std::endl;
                 // TODO : does not send the message to the server
                 send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
             }
+        }
+        else if (parsed->flag == 'k' && parsed->sign == 1)
+        {
+            try
+            {
+                _channel_rn->set_keySet(true);
+                _channel_rn->set_password(options[i]);
+                // TODO : does not send the message to the server
+                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                std::cout << "flag changed +k" << std::endl;
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << e.what() << '\n';
+            }
             i++;
         }
-
-
-
-
-
-
-
+        else if (parsed->flag == 'k' && parsed->sign == 2)
+        {
+            if (_channel_rn->get_keySet() == true)
+            {
+                _channel_rn->set_keySet(false);
+                std::cout << "flag changed -k" << std::endl;
+                // TODO : does not send the message to the server
+                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+            }
+        }        
         parsed = parsed->next;
     }
-    return;   
+    return;
 }
-
-
 
 s_flag *User::parserOption(std::string flags)
 {
@@ -543,9 +573,8 @@ s_flag *User::updateStruct(s_flag *newFlag, int sign, bool isValid)
 * /mode +t +l ==> send "+tl"
 * /mode +t +l 10 +o mimi ==> send +tlo 10 mimi
 * /mode +t -l 10 +o mimi ==> send +t-l10+o mimi
-* / mode +t -l 58 +k hello ==> send +t-l58+k hello
+* /mode +t -l 58 +k hello ==> send +t-l58+k hello
 * /mode +t +l 58 +k hello ==> send +tlk 58 hello
 * /mode +t +l 58 -k hello ==> send +tl-k 58 hello 
-* /mode +t +l 58 -k hello +o ==> send +tl-k+o 58 hello 
-
+* /mode +t +l 58 -k hello +o ==> send +tl-k+o 58 hello
 */

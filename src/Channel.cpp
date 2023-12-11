@@ -5,6 +5,9 @@ Channel::Channel(std::string name): _name(name) {
     _topicRestricted = false;
     _keySet = false;
     _limitSet = false;
+    _password = "\0";
+    _limit = 0;
+    _topic = "\0";
 }
 
 Channel::~Channel() {
@@ -83,6 +86,30 @@ bool Channel::get_limitSet() const {
     return _limitSet;
 }
 
+void Channel::set_limitSet(bool limitSet) {
+    _limitSet = limitSet;
+}
+
 int Channel::get_limit() const {
     return _limit;
+}
+
+void Channel::set_limit(int limit) {
+    _limit = limit;
+}
+
+std::string Channel::get_password() const {
+    return _password;
+}
+
+void Channel::set_password(std::string password) {
+    _password = password;
+}
+
+bool Channel::get_keySet() const {
+    return _keySet;
+}
+
+void Channel::set_keySet(bool key) {
+    _keySet = key;
 }
