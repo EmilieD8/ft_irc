@@ -16,7 +16,7 @@ class Server {
         Server(Server const & src);
         Server & operator=(Server const & src);
 
-        std::vector<User> &get_clients();
+        std::vector<User*> &get_clients();
         std::vector<Channel> &get_channels();
         std::string get_password() const;
 
@@ -32,7 +32,7 @@ class Server {
         bool isExit;
 
         std::vector<Channel> _channels;
-        std::vector<User> _clients;
+        std::vector<User *> _clients;
 
         s_socket _server;
         s_socket _client;

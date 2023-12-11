@@ -23,23 +23,35 @@ Channel &Channel::operator=(Channel const &src) {
         _name = src._name;
         _topic = src._topic;
         _users = src._users;
+        // change to private attributes ++
     }
     return *this;
 }
 
 void Channel::add_user(User &user) {
-    _users.push_back(user);
+    _users.push_back(&user);
+    for (const auto& user_ptr : _users) {
+        std::cout << "Name: " << user.get_name() << ", nick: " << user.get_nick() << std::endl;
+    }
     std::cout << "user added to the channel : " << user.get_name() << std::endl;
 }
 
-void Channel::remove_user(User &user) {
+/*void Channel::remove_user(User &user) {
     for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); ++it) {
         if (it->get_fd() == user.get_fd()) {
             _users.erase(it);
             break;
         }
     }
+}*/
+
+void Channel::send_to_all(std::string msg) {
+    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
+        send((*it)->get_fd(), msg.c_str(), msg.length(), 0);
+    }
 }
+
+
 
 void Channel::set_name(std::string name) {
     _name = name;
@@ -57,7 +69,7 @@ std::string Channel::get_topic() const {
     return _topic;
 }
 
-std::vector<User> &Channel::get_users()  {
+std::vector<User*> &Channel::get_users()  {
     return _users;
 }
 
@@ -113,3 +125,4 @@ bool Channel::get_keySet() const {
 void Channel::set_keySet(bool key) {
     _keySet = key;
 }
+

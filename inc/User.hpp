@@ -60,7 +60,7 @@ class User {
         std::string _name;
         std::string _realName;
         std::string _hostName;
-        std::string _serverName;
+        std::string _serverName; // to be deleted ?
         std::string _pw;
         s_message _message;
         Channel *_channel_rn;

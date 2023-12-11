@@ -3,11 +3,23 @@
 User::User() {
     _isInAChannel = false;
     _channel_rn = NULL;
+    _nick = "\0";
+    _name = "\0";
+    _pw = "\0";
+    _realName = "\0";
+    _hostName = "\0";
+    _serverName = "\0";
 }
 
 User::User(int fd, int id) : _fd(fd), id(id)  {
     _isInAChannel = false;
     _channel_rn = NULL;
+    _nick = "\0";
+    _name = "\0";
+    _pw = "\0";
+    _realName = "\0";
+    _hostName = "\0";
+    _serverName = "\0";
 }
 
 User::~User() {
@@ -22,6 +34,8 @@ User &User::operator=(User const &src) {
     if (this != &src) {
         _fd = src._fd;
         id = src.id;
+        // change to private attributes ++
+
     }
     return *this;
 }
@@ -89,7 +103,7 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "/INVALID"};
+    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "/INVALID"};
     //   TODO : replace also the command by their digit codes
     int count = 0;
     size_t arraySize = sizeof(type) / sizeof(type[0]);
@@ -116,7 +130,7 @@ void User::parseMessage(Server &server) {
             command_join(server, this->_message);
             break;
         case 4:
-            //TODO KIC
+            //TODO KICK
             break;
         case 5:
             //TODO INVITE
@@ -134,6 +148,9 @@ void User::parseMessage(Server &server) {
             command_topic(server, this->_message);
             break;
         case 10:
+            command_privmsg(server, this->_message);
+            break;
+        case 11:
             std::cout << "Error: invalid command" << std::endl;// check if correct. maybe to put the help ? 
             break;
     }
@@ -154,18 +171,20 @@ void User::passwordCheck(Server &server) {
 
 bool User::command_nick(Server &server, s_message &message) {
     std::cout << "command_nick function checked" << std::endl;
+    std::cout << "fd is " << _fd << std::endl;
     // TODO : if user already taken at first instance, then change the username with a special symbol.
     //TODO : check if nickname changes works
     //TODO : chekc if proper error messages sent
     std::string new_nick = message._params;
     std::string old = get_nick();
+    std::cout << "Nick is '" << old << "'" << std::endl;
         if (new_nick.empty()) {
             send(_fd, ERR_NONICKNAMEGIVEN(message._command).c_str(), ERR_NONICKNAMEGIVEN(message._command).size(), 0);
             return false;
         }
-        std::vector <User> clients = server.get_clients();
-        for (std::vector<User>::iterator it = clients.begin(); it != clients.end(); it++) {
-            if (it->get_nick().compare(new_nick) == 0) {
+        std::vector <User *> clients = server.get_clients();
+        for (std::vector<User *>::iterator it = clients.begin(); it != clients.end(); it++) {
+            if ((*it)->get_nick().compare(new_nick) == 0) {
                 send(_fd, ERR_NICKNAMEINUSE(message._command, new_nick).c_str(),
                      ERR_NICKNAMEINUSE(message._command, new_nick).size(), 0);
                 return false;
@@ -173,6 +192,7 @@ bool User::command_nick(Server &server, s_message &message) {
         }
     set_nick(new_nick);
     send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
+    std::cout << "Nick is '" << get_nick() << "'" << std::endl;
     return true;
 }
 
@@ -245,14 +265,16 @@ void User::command_join(Server &server, s_message &message) {
                     return;
                 }
             }
+            std::cout << "Channel name : " << it->get_name() << std::endl;
             it->add_user(*this);
             set_channel_atm(*it);
             setOperatorStatus(&(*it), false);
             send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).c_str(),
                 JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).size(), 0);
-            send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(),  _channel_rn->get_topic()).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), _channel_rn->get_topic()).size(), 0);
+            if (_channel_rn->get_topic().empty() == true)
+                send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(),  _channel_rn->get_topic()).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), _channel_rn->get_topic()).size(), 0);
             //DEBUG
-            std::cout << "Number of user in this channel :" << it->get_users().size() << std::endl;
+            std::cout << "!!!! Number of user in this channel :" << _channel_rn->get_users().size() << std::endl;
             break;
         } 
         else
@@ -567,6 +589,11 @@ s_flag *User::updateStruct(s_flag *newFlag, int sign, bool isValid)
     newFlag->isValid = isValid;
     newFlag->next = nullptr;
     return (newFlag);
+}
+
+void User::command_privmsg(Server &server, s_message &message) {
+    std::cout << "Command privmsg reached" << std::endl;
+    _channel_rn->send_to_all(message._params);
 }
 
 /*irc interpretation : 

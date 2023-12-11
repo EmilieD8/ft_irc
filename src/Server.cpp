@@ -46,7 +46,7 @@ std::string Server::get_password() const {
     return _password;
 }
 
-std::vector<User> &Server::get_clients() {
+std::vector<User*> &Server::get_clients() {
     return _clients;
 }
 
@@ -113,8 +113,12 @@ void Server::connect() {
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
 
     User *new_user = new User(new_connection, id);
-    _clients.push_back(*new_user);
+    _clients.push_back(new_user);
+    for (const auto& user_ptr : _clients) {
+        std::cout << "User: " << user_ptr->get_name() << std::endl;
+    }
     _num_clients++;
+    std::cout << "Num client is : " << _num_clients << std::endl;
     id++;
 }
 
@@ -127,6 +131,7 @@ void Server::read_client()
         if (connectionFds[i].fd != -1 && connectionFds[i].revents & POLLIN)
         {
             std::cout << "Reading..." << std::endl;
+            print_channels();
             char buf[BUFFER_SIZE];
             memset(buf, 0, sizeof(buf));
             int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
@@ -149,13 +154,13 @@ void Server::splitBuf(std::string buf, int fd, Server &server) {
     size_t start = 0;
     size_t end = buf.find("\r\n");
 
-    for (std::vector<User>::iterator it = _clients.begin(); it != _clients.end(); it++) {
-        if (it->get_fd() == fd) {
+    for (std::vector<User *>::iterator it = _clients.begin(); it != _clients.end(); it++) {
+        if ((*it)->get_fd() == fd) {
             while (end != std::string::npos) {
             std::string message(buf.substr(start, end - start));
             start = end + 2;
             end = buf.find("\r\n", start);
-            it->splitMessage(fd, server, message);
+                (*it)->splitMessage(fd, server, message);
         }
         break;
         }
@@ -192,14 +197,14 @@ void Server::print_channels() {
     for (std::vector<Channel>::iterator channel = temp.begin(); channel != temp.end(); ++channel) {
         std::cout << "Channel name: " << channel->get_name() << std::endl;
 
-        std::vector<User>& users = channel->get_users();
+        std::vector<User*>& users = channel->get_users();
         if (users.empty()) {
             std::cout << "No users in this channel" << std::endl;
         } else {
             std::cout << "Number of users in this channel: " << users.size() << std::endl;
 
-            for (std::vector<User>::const_iterator user = users.begin(); user != users.end(); ++user) {
-                std::cout << "User name: " << user->get_name() << std::endl;
+            for (std::vector<User*>::const_iterator user = users.begin(); user != users.end(); ++user) {
+                std::cout << "User name: " << (*user)->get_name() << std::endl;
             }
         }
 
