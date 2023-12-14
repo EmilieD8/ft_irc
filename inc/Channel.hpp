@@ -13,7 +13,7 @@ class Channel {
         void add_user(User &user);
         void remove_user(User &user);
 
-        void send_to_all(std::string msg);
+        void send_to_all(std::string msg, std::string sender);
 
 
         std::string get_topic() const;

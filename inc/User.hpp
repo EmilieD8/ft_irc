@@ -34,6 +34,7 @@ class User {
         std::string get_name() const;
         std::string get_pw() const;
         void set_nick(std::string nick);
+        void set_name(std::string name);
         void setOperatorStatus(Channel *channel, bool isOperator);
         bool get_operatorStatus(Channel *channel) const;
 
