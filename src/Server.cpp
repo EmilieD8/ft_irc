@@ -50,7 +50,7 @@ std::vector<User*> &Server::get_clients() {
     return _clients;
 }
 
-std::vector<Channel> &Server::get_channels() {
+std::vector<Channel *> &Server::get_channels() {
     return _channels;
 }
 
@@ -183,12 +183,12 @@ void Server::launchServer() {
 
 void Server::print_channels() {
     std::cout << "Printing channels" << std::endl;
-    std::vector<Channel>& temp = get_channels();  // Use a reference
+    std::vector<Channel *>& temp = get_channels();  // Use a reference
 
-    for (std::vector<Channel>::iterator channel = temp.begin(); channel != temp.end(); ++channel) {
-        std::cout << "Channel name: " << channel->get_name() << std::endl;
+    for (std::vector<Channel *>::iterator channel = temp.begin(); channel != temp.end(); ++channel) {
+        std::cout << "Channel name: " << (*channel)->get_name() << std::endl;
 
-        std::vector<User*>& users = channel->get_users();
+        std::vector<User*>& users = (*channel)->get_users();
         if (users.empty()) {
             std::cout << "No users in this channel" << std::endl;
         } else {
@@ -198,7 +198,6 @@ void Server::print_channels() {
                 std::cout << "User nickname: " << (*user)->get_nick() << std::endl;
             }
         }
-
         std::cout << std::endl;  // Add a separator between channels
     }
 }

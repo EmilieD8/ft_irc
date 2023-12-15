@@ -65,16 +65,22 @@ void User::set_channel_atm(Channel& channel) {
     _isInAChannel = true;
 }
 
-void User::setOperatorStatus(Channel *channel, bool isOperator)
-{
-    _operatorStatusMap[channel] = isOperator;
+void User::setOperatorStatus(Channel &channel, bool isOperator) {
+    _operatorStatusMap[&channel] = isOperator;
 }
 
 bool User::get_operatorStatus(Channel* channel) const {
     std::map<Channel*, bool>::const_iterator it = _operatorStatusMap.find(channel);
-    return (it != _operatorStatusMap.end()) ? it->second : false;
+    //return (it != _operatorStatusMap.end()) ? it->second : false; // TODO check for ?
+    if (it->second == true)
+        return true;
+    else
+        return false;
 }
 
+Channel *User::get_channel_atm() const {
+    return _channel_rn;
+}
 void User::set_nick(std::string nick) {
     _nick = nick;
 }
@@ -107,7 +113,7 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "/INVALID"};
+    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "PART", "/INVALID"};
     //   TODO : replace also the command by their digit codes
     int count = 0;
     size_t arraySize = sizeof(type) / sizeof(type[0]);
@@ -155,6 +161,9 @@ void User::parseMessage(Server &server) {
             command_privmsg(server, this->_message);
             break;
         case 11:
+            command_part(server, this->_message);
+            break;
+        case 12:
             std::cout << "Error: invalid command" << std::endl;// check if correct. maybe to put the help ? 
             break;
     }
@@ -178,7 +187,7 @@ bool User::command_nick(Server &server, s_message &message) {
     //std::cout << "fd is " << _fd << std::endl;
     // TODO : if user already taken at first instance, then change the username with a special symbol.
     //TODO : check if nickname changes works
-    //TODO : chekc if proper error messages sent
+    //TODO : check if proper error messages sent
     std::string new_nick = message._params;
     std::string old = get_nick();
     //std::cout << "Nick is '" << old << "'" << std::endl;
@@ -258,24 +267,23 @@ void User::command_ping(Server &server, s_message &message) {
 void User::command_join(Server &server, s_message &message) {
     std::cout << "command_join function checked" << std::endl;
     int i = 0;
-    for (std::vector<Channel>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
-        if (it->get_name() == message._params) {
+    for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if ((*it)->get_name() == message._params) {
             std::cout << "Channel exists already" << std::endl;
-            if ((*it).get_limitSet() == true)
-            {
-                if ((*it).get_userSize() > (*it).get_limit())
-                {
+            if ((*it)->get_limitSet() == true) {
+                if ((*it)->get_userSize() > (*it)->get_limit()) {
                     send(_fd, ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).c_str(), ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).size(), 0);
                     return;
                 }
             }
             // std::cout << "Channel name : " << it->get_name() << std::endl;
-            it->add_user(*this);
-            set_channel_atm(*it);
-            setOperatorStatus(&(*it), false);
-            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).c_str(),
-                JOIN(this->get_nick(), this->get_name(), _hostName, it->get_name()).size(), 0);
-            if (_channel_rn->get_topic().empty() == true)
+            (*it)->add_user(*this);
+            set_channel_atm(**it);
+            setOperatorStatus(**it, false);
+            std::cout << "Operator status is : " << get_operatorStatus((*it)) << std::endl;
+            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).c_str(),
+                JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).size(), 0);
+            if (_channel_rn->get_topic().empty() == false)
                 send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(),  _channel_rn->get_topic()).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), _channel_rn->get_topic()).size(), 0);
             //DEBUG
             // std::cout << "!!!! Number of user in this channel :" << _channel_rn->get_users().size() << std::endl;
@@ -284,25 +292,22 @@ void User::command_join(Server &server, s_message &message) {
         else
             i++;
     }
-    if (i == server.get_channels().size())
-    {
+    if (i == server.get_channels().size()) {
         std::cout << "Channel does not exist already" << std::endl;
         Channel *channel = new Channel(message._params);
         channel->add_user(*this);
-        server.get_channels().push_back(*channel);
         set_channel_atm(*channel);
-        setOperatorStatus(channel, true);
+        setOperatorStatus(*channel, true); // TODO: need to add @ to the nickname
+        std::cout << "Operator status is : " << get_operatorStatus(channel) << std::endl;
         send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).c_str(),
                 JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).size(), 0);
+        server.get_channels().push_back(channel);
     }
-    //server.print_channels();
-    
+    server.print_channels();
 }
 
 void User::command_topic(Server &server, s_message &message) {
     std::cout << "command_topic function checked" << std::endl;
-std::cout << " fd is " << _fd << "and _isInChannel is " << _isInAChannel << "and is operator is " 
-<< this->get_operatorStatus(_channel_rn) << std::endl;
 /*
  TODO:
  format : TOPIC #channel :New Topic 
@@ -325,7 +330,6 @@ RPL_NOTOPIC
     {
         if (_channel_rn->get_topicRestricted() == true)
         {
-            std::cout << "topic is restricted" << std::endl; // to be deleted
             if (get_operatorStatus(_channel_rn) == false)
             {
                 send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
@@ -360,8 +364,9 @@ RPL_NOTOPIC
         else
         {
             _channel_rn->set_topic(nameTopic);
-            send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).c_str(), 
-                RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).size(), 0);
+            _channel_rn->send_to_all_macro(RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic));
+           /* send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).c_str(),
+                RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).size(), 0);*/
         }
     }
     else
@@ -452,9 +457,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_topicRestricted() == false)
             {
                 _channel_rn->set_topicRestricted(true);
-                std::cout << "flag changed +t" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "+t"));
             }
         }
         else if (parsed->flag == 't' && parsed->sign == 2)
@@ -462,9 +465,8 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_topicRestricted() == true)
             {
                 _channel_rn->set_topicRestricted(false);
-                std::cout << "flag changed -t" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-t"));
+
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 1)
@@ -472,9 +474,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_inviteOnly() == false)
             {
                 _channel_rn->set_inviteOnly(true);
-                std::cout << "flag changed +i" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "+i"));
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 2)
@@ -482,9 +482,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_inviteOnly() == true)
             {
                 _channel_rn->set_inviteOnly(false);
-                std::cout << "flag changed -i" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-i"));
             }
         }
         else if (parsed->flag == 'l' && parsed->sign == 1)
@@ -494,9 +492,8 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
                 int limit = std::stoi(options[i]);
                 _channel_rn->set_limitSet(true);
                 _channel_rn->set_limit(limit);
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
-                std::cout << "flag changed +l" << std::endl;
+                std::string flags = "+l " + std::to_string(limit);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), flags));
             }
             catch(const std::exception& e)
             {
@@ -509,9 +506,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_limitSet() == true)
             {
                 _channel_rn->set_limitSet(false);
-                std::cout << "flag changed -l" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-l"));
             }
         }
         else if (parsed->flag == 'k' && parsed->sign == 1)
@@ -520,13 +515,12 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             {
                 _channel_rn->set_keySet(true);
                 _channel_rn->set_password(options[i]);
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
-                std::cout << "flag changed +k" << std::endl;
+                std::string flags = "+k " + options[i];
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), flags));
             }
             catch(const std::exception& e)
             {
-                std::cerr << e.what() << '\n';
+                std::cerr << e.what() << '\n'; // correct ?
             }
             i++;
         }
@@ -535,11 +529,60 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (_channel_rn->get_keySet() == true)
             {
                 _channel_rn->set_keySet(false);
-                std::cout << "flag changed -k" << std::endl;
-                // TODO : does not send the message to the server
-                send(_fd, MODE_CHANNELMSGWITHPARAM( _channel_rn->get_name(), parsed->flag, parsed->flag).c_str(),MODE_CHANNELMSGWITHPARAM(_channel_rn->get_name(), parsed->flag, parsed->flag).size(), 0);
+                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-k"));
             }
-        }        
+        }
+        else if (parsed->flag == 'o' && parsed->sign == 1)
+        {
+            std::string nickname = options[i];
+            std::string flags = "+o " + options[i];
+            bool changed_plus = false;
+            for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
+            {
+                if ((*it)->get_nick() == nickname)
+                {
+                    (*it)->setOperatorStatus(*_channel_rn, true);
+                    changed_plus = true;
+                    _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, _channel_rn->get_name(), flags));
+                    break;
+                }
+            }
+            if (changed_plus == false) {
+                send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
+                     ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0); // TODO
+                continue;
+            }
+            i++;
+        }
+        else if (parsed->flag == 'o' && parsed->sign == 2)
+        {
+            std::string nickname = options[i];
+            std::string flags = "-o " + options[i];
+            bool changed_minus = false;
+            for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
+            {
+                if ((*it)->get_nick() == nickname)
+                {
+                    (*it)->setOperatorStatus(*_channel_rn, false);
+                    changed_minus = true;
+                    _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, _channel_rn->get_name(), flags));
+                    break;
+                }
+            }
+            if (changed_minus == false) {
+                send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
+                     ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0);
+                // TODO
+                continue;
+            }
+            i++;
+        }
+        else
+        {
+            send(_fd, ERR_UMODEUNKNOWNFLAG(this->_nick).c_str(), ERR_UMODEUNKNOWNFLAG(this->_nick).size(), 0);
+            //TODO
+        }
+        //TODO : parsing not correct ?
         parsed = parsed->next;
     }
     return;
@@ -597,12 +640,20 @@ s_flag *User::updateStruct(s_flag *newFlag, int sign, bool isValid)
 
 void User::command_privmsg(Server &server, s_message &message) {
     std::cout << "Command privmsg reached" << std::endl;
-    _channel_rn->send_to_all(message._params, this->get_nick());
+    _channel_rn->send_to_all_private(message._params, this->get_nick());
+}
+
+void User::command_part(Server &server, s_message &message) {
+    send(_fd, PART(_nick, _name, _hostName, _channel_rn->get_name()).c_str(), PART(_nick, _name, _hostName, _channel_rn->get_name()).size(), 0);
+    _channel_rn->remove_user(*this);
+    _channel_rn = NULL;
+    _isInAChannel = false;
+    server.print_channels();
 }
 
 /*irc interpretation : 
 * /mode +t +l ==> send "+tl"
-* /mode +t +l 10 +o mimi ==> send +tlo 10 mimi
+* /mode +t +l 10 +o mimi ==> send #CHANNEL +tlo 10 mimi
 * /mode +t -l 10 +o mimi ==> send +t-l10+o mimi
 * /mode +t -l 58 +k hello ==> send +t-l58+k hello
 * /mode +t +l 58 +k hello ==> send +tlk 58 hello

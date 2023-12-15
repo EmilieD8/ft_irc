@@ -30,32 +30,17 @@ Channel &Channel::operator=(Channel const &src) {
 
 void Channel::add_user(User &user) {
     _users.push_back(&user);
-    // for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-    //     std::cout << "Name: " << (*it)->get_name() << ", nick: " << (*it)->get_nick() << std::endl;
-    // }
-
-   //std::cout << "user added to the channel : " << user.get_name() << std::endl;
 }
 
-/*void Channel::remove_user(User &user) {
-    for (std::vector<User>::iterator it = _users.begin(); it != _users.end(); ++it) {
-        if (it->get_fd() == user.get_fd()) {
+void Channel::remove_user(User &user) {
+    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
+        if ((*it)->get_fd() == user.get_fd()) {
             _users.erase(it);
             break;
         }
     }
-}*/
-
-void Channel::send_to_all(std::string msg, std::string sender) {
-    std::cout << "entering send all" << std::endl;
-    std::cout << "sender: " << sender << std::endl;
-    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
-    
-        if ((*it)->get_nick() != sender)
-            send((*it)->get_fd(), PRIVMSG((*it)->get_nick(), (*it)->get_name(), (*it)->get_name(), this->get_name(), msg).c_str(),
-            PRIVMSG((*it)->get_nick(), (*it)->get_name(), (*it)->get_name(), this->get_name(), msg).size(), 0 );
-    }
 }
+
 
 void Channel::set_name(std::string name) {
     _name = name;
@@ -130,3 +115,18 @@ void Channel::set_keySet(bool key) {
     _keySet = key;
 }
 
+void Channel::send_to_all_private(std::string msg, std::string sender) {
+    std::cout << "entering send all" << std::endl;
+    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
+        if ((*it)->get_nick() != sender && (*it)->get_channel_atm()->get_name() == this->get_name())
+            send((*it)->get_fd(), PRIVMSG(sender, (*it)->get_name(), (*it)->get_name(), this->get_name(), msg).c_str(),
+                 PRIVMSG(sender, (*it)->get_name(), (*it)->get_name(), this->get_name(), msg).size(), 0 );
+    }
+}
+
+void Channel::send_to_all_macro(std::string macro) {
+    std::cout << "entering send all" << std::endl;
+    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
+            send((*it)->get_fd(), macro.c_str(),macro.size(), 0 );
+    }
+}
