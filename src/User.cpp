@@ -4,22 +4,26 @@ User::User() {
     _isInAChannel = false;
     _channel_rn = NULL;
     _nick = "\0";
+    _nickOp = "\0";
     _name = "\0";
     _pw = "\0";
     _realName = "\0";
     _hostName = "\0";
     _serverName = "\0";
+    _passwordChecked = false;
 }
 
 User::User(int fd, int id) : _fd(fd), id(id)  {
     _isInAChannel = false;
     _channel_rn = NULL;
     _nick = "\0";
+    _nickOp = "\0";
     _name = "\0";
     _pw = "\0";
     _realName = "\0";
     _hostName = "\0";
     _serverName = "\0";
+    _passwordChecked = false;
 }
 
 User::~User() {
@@ -52,8 +56,16 @@ std::string User::get_nick() const {
     return _nick;
 }
 
+std::string User::get_nickOp() const {
+    return _nickOp;
+}
+
 std::string User::get_name() const {
     return _name;
+}
+
+std::string User::get_host() const {
+    return _hostName;
 }
 
 std::string User::get_pw() const {
@@ -83,6 +95,10 @@ Channel *User::get_channel_atm() const {
 }
 void User::set_nick(std::string nick) {
     _nick = nick;
+}
+
+void User::set_nickOp(std::string nickOp) {
+    _nickOp = nickOp;
 }
 
 void User::set_name(std::string name) {
@@ -127,7 +143,7 @@ void User::parseMessage(Server &server) {
 
     switch (count) {
         case 0:
-            passwordCheck(server);
+            command_pass(server);
             break;
         case 1:
             command_nick(server, this->_message);
@@ -169,48 +185,62 @@ void User::parseMessage(Server &server) {
     }
 }
 
-void User::passwordCheck(Server &server) {
+void User::command_pass(Server &server) {
     std::cout << "password function checked" << std::endl;
 
     if (_message._params.compare(server.get_password()) != 0) {
         send(_fd, ERR_PASSWDMISMATCH, 26, 0);
-        server.set_exit_status(true);
-        throw std::runtime_error("Error wrong password");
+        //server.set_exit_status(true);
+        //throw std::runtime_error("Error wrong password");
     }
     else
-        std::cout << "password is correct" << std::endl;
+        _passwordChecked = true;
     // TODO: maybe create a while loop to give three more tries to connect with the right password
 }
 
-bool User::command_nick(Server &server, s_message &message) {
+void User::command_nick(Server &server, s_message &message) {
     std::cout << "command_nick function checked" << std::endl;
-    //std::cout << "fd is " << _fd << std::endl;
-    // TODO : if user already taken at first instance, then change the username with a special symbol.
-    //TODO : check if nickname changes works
-    //TODO : check if proper error messages sent
+    if (_passwordChecked == false) {
+        return;
+    }
+    static int i = 0;
     std::string new_nick = message._params;
+    if (_nick.empty() && (message._params.find(' ') != std::string::npos || message._params.size() > 9))
+        new_nick = new_nick.substr(0, 9);
+    if (message._params.find(' ') != std::string::npos || message._params.size() > 9) {
+        send(_fd, ERR_ERRONEUSNICKNAME(_nick).c_str(), ERR_ERRONEUSNICKNAME(_nick).size(), 0);
+        return ;
+    }
     std::string old = get_nick();
-    //std::cout << "Nick is '" << old << "'" << std::endl;
-        if (new_nick.empty()) {
-            send(_fd, ERR_NONICKNAMEGIVEN(message._command).c_str(), ERR_NONICKNAMEGIVEN(message._command).size(), 0);
-            return false;
+    if (new_nick.empty()) {
+        send(_fd, ERR_NONICKNAMEGIVEN(message._command).c_str(), ERR_NONICKNAMEGIVEN(message._command).size(), 0);
+        return ;
+    }
+    std::vector <User *> clients = server.get_clients();
+    for (std::vector<User *>::iterator it = clients.begin(); it != clients.end(); it++) {
+        if ((*it)->get_nick().compare(new_nick) == 0) {
+            send(_fd, ERR_NICKNAMEISUSE(new_nick).c_str(),ERR_NICKNAMEISUSE(new_nick).size(), 0);
+            new_nick = new_nick.substr(0, new_nick.size() - 1);
+            new_nick += std::to_string(i);
+            i++;
+            set_nick(new_nick);
+            send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
+            return ;
         }
-        std::vector <User *> clients = server.get_clients();
-        for (std::vector<User *>::iterator it = clients.begin(); it != clients.end(); it++) {
-            if ((*it)->get_nick().compare(new_nick) == 0) {
-                send(_fd, ERR_NICKNAMEINUSE(message._command, new_nick).c_str(),
-                     ERR_NICKNAMEINUSE(message._command, new_nick).size(), 0);
-                return false;
-            }
-        }
+    }
+    std::string newNickOp = "@" + new_nick;
     set_nick(new_nick);
+    set_nickOp(newNickOp);
     send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
-    std::cout << "Nick is '" << get_nick() << "'" << std::endl;
-    return true;
+    return ;
 }
 
-bool User::command_user(Server &server, s_message &message) {
+void User::command_user(Server &server, s_message &message) {
     std::cout << "command_user function checked" << std::endl;
+    if (_passwordChecked == false) {
+        delete this; // TODO : check for leaks
+        return;
+    }
     //format : <username> <hostname> <servername> :<realname>
     std::stringstream ss(message._params);
     std::string word;
@@ -218,7 +248,7 @@ bool User::command_user(Server &server, s_message &message) {
 
     while (ss >> word) {
         if (count == 0)
-            {set_name(word);}//this->_name = word;
+            this->_name = word;
         else if (count == 1)
             this->_hostName = word;
         else if (count == 2)
@@ -231,12 +261,15 @@ bool User::command_user(Server &server, s_message &message) {
             this->_realName += " " + word;
         count++;
     }
+    if (this->_name.size() > 9) {
+        _name = _name.substr(0, 9);
+    }
     if (count < 4) {
         send(_fd, ERR_NEEDMOREPARAMS(message._command).c_str(), ERR_NEEDMOREPARAMS(message._command).size() , 0);
-        return false;
+        return ;
     }
     send(_fd, RPL_WELCOME(_nick, _name, _hostName).c_str(), RPL_WELCOME(_nick, _name, _hostName).size(), 0);
-    return true;
+    return ;
 }
 
 void User::command_ping(Server &server, s_message &message) {
@@ -269,41 +302,35 @@ void User::command_join(Server &server, s_message &message) {
     int i = 0;
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
         if ((*it)->get_name() == message._params) {
-            std::cout << "Channel exists already" << std::endl;
             if ((*it)->get_limitSet() == true) {
                 if ((*it)->get_userSize() > (*it)->get_limit()) {
                     send(_fd, ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).c_str(), ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).size(), 0);
                     return;
                 }
             }
-            // std::cout << "Channel name : " << it->get_name() << std::endl;
             (*it)->add_user(*this);
             set_channel_atm(**it);
             setOperatorStatus(**it, false);
-            std::cout << "Operator status is : " << get_operatorStatus((*it)) << std::endl;
             send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).c_str(),
                 JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).size(), 0);
             if (_channel_rn->get_topic().empty() == false)
                 send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(),  _channel_rn->get_topic()).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), _channel_rn->get_topic()).size(), 0);
-            //DEBUG
-            // std::cout << "!!!! Number of user in this channel :" << _channel_rn->get_users().size() << std::endl;
             break;
         } 
         else
             i++;
     }
     if (i == server.get_channels().size()) {
-        std::cout << "Channel does not exist already" << std::endl;
         Channel *channel = new Channel(message._params);
         channel->add_user(*this);
         set_channel_atm(*channel);
-        setOperatorStatus(*channel, true); // TODO: need to add @ to the nickname
-        std::cout << "Operator status is : " << get_operatorStatus(channel) << std::endl;
-        send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).c_str(),
-                JOIN(this->get_nick(), this->get_name(), _hostName, channel->get_name()).size(), 0);
+        setOperatorStatus(*channel, true);
+        send(_fd,RPL_YOUREOPER(_nick).c_str(), RPL_YOUREOPER(_nick).size(), 0);
+// TODO: need to add @ to the nickname
+        send(_fd, JOIN(_nick, _name, _hostName, channel->get_name()).c_str(),
+                JOIN(_nick, _name, _hostName, channel->get_name()).size(), 0);
         server.get_channels().push_back(channel);
     }
-    server.print_channels();
 }
 
 void User::command_topic(Server &server, s_message &message) {
@@ -390,14 +417,9 @@ void User::command_mode(Server &server, s_message &message) {
     if (_isInAChannel == false)
     {
         //is not in a channel, cannot use this command;
-        std::cout << "Cannot use this command in that context" << std::endl;
+        std::cout << "Cannot use this command in that context" << std::endl; //TODO :
         return;
     }
-    std::cout << "Beginning" << std::endl;
-    std::cout << "Topic: " << _channel_rn->get_topicRestricted() << std::endl;
-    std::cout << "Invite: " << _channel_rn->get_inviteOnly() << std::endl;
-    std::cout << "Limit: " << _channel_rn->get_limitSet() << " int : " << _channel_rn->get_limit() << std::endl;
-    std::cout << "Password: " << _channel_rn->get_keySet() << " word : " <<_channel_rn->get_password() << std::endl;
     if (get_operatorStatus(_channel_rn) == false)
     {
         send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
@@ -435,12 +457,6 @@ void User::command_mode(Server &server, s_message &message) {
         delete currentFlag;
         currentFlag = nextFlag; 
     }
-    std::cout << "\n\nEnd" << std::endl;
-    std::cout << "Topic: " << _channel_rn->get_topicRestricted() << std::endl;
-    std::cout << "Invite: " << _channel_rn->get_inviteOnly() << std::endl;
-    std::cout << "Limit: " << _channel_rn->get_limitSet() << " int : " << _channel_rn->get_limit() << std::endl;
-    std::cout << "Password: " << _channel_rn->get_keySet() << " word : " <<_channel_rn->get_password() << std::endl;
-
     return;
 }
 
@@ -542,6 +558,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
                 if ((*it)->get_nick() == nickname)
                 {
                     (*it)->setOperatorStatus(*_channel_rn, true);
+                    send(_fd,RPL_YOUREOPER(_nick).c_str(), RPL_YOUREOPER(_nick).size(), 0);
                     changed_plus = true;
                     _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, _channel_rn->get_name(), flags));
                     break;
@@ -640,7 +657,45 @@ s_flag *User::updateStruct(s_flag *newFlag, int sign, bool isValid)
 
 void User::command_privmsg(Server &server, s_message &message) {
     std::cout << "Command privmsg reached" << std::endl;
-    _channel_rn->send_to_all_private(message._params, this->get_nick());
+    std::stringstream ss(message._params);
+    std::string word;
+    std::string user;
+    std::string msg;
+    int count = 0;
+    while (ss >> word) {
+        if (count == 1 && word[0] != ':')
+            user = word;
+        else if (count != 0)
+            msg += word + " ";
+        count++;
+    }
+    if (user.empty() == true)
+    {
+        if (get_operatorStatus(_channel_rn) == false)
+            _channel_rn->send_to_all_private(message._params, this,_nick);
+        else
+            _channel_rn->send_to_all_private(message._params,this, _nickOp);
+    }
+    else
+    {
+        for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
+        {
+            if ((*it)->get_nick() == user)
+            {
+                if (get_operatorStatus(_channel_rn) == false)
+                {
+                    send((*it)->get_fd(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
+                    send(_fd, PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
+                }
+                else
+                {
+                    send(_fd, PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
+                    send((*it)->get_fd(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
+                }
+                return;
+            }
+        }
+    }
 }
 
 void User::command_part(Server &server, s_message &message) {
@@ -648,7 +703,11 @@ void User::command_part(Server &server, s_message &message) {
     _channel_rn->remove_user(*this);
     _channel_rn = NULL;
     _isInAChannel = false;
-    server.print_channels();
+
+
+
+    //TODO : need to check if the user is in the channel or not
+    //TODO : lose operator status if the user is operator
 }
 
 /*irc interpretation : 
