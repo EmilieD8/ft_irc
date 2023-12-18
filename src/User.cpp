@@ -335,24 +335,6 @@ void User::command_join(Server &server, s_message &message) {
 
 void User::command_topic(Server &server, s_message &message) {
     std::cout << "command_topic function checked" << std::endl;
-/*
- TODO:
- format : TOPIC #channel :New Topic 
-- check if the user is in that channel atm otherwise fail - error ERR_NOTONCHANNEL 
-- check if the flag mode -t is set otherwise no if user is not operator
-- change the topic and send a message
-- if does not contain a param <topic>, then just return the current topic of the channel.
-RPL_NOTOPIC
-                        "<channel> :No topic is set"
-        332     RPL_TOPIC
-                        "<channel> :<topic>"
-
-                - When sending a TOPIC message to determine the
-                  channel topic, one of two replies is sent.  If
-                  the topic is set, RPL_TOPIC is sent back else
-                  RPL_NOTOPIC.
-
-*/
     if (_isInAChannel == true)
     {
         if (_channel_rn->get_topicRestricted() == true)
@@ -392,8 +374,6 @@ RPL_NOTOPIC
         {
             _channel_rn->set_topic(nameTopic);
             _channel_rn->send_to_all_macro(RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic));
-           /* send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).c_str(),
-                RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), nameTopic).size(), 0);*/
         }
     }
     else
