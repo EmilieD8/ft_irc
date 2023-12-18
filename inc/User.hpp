@@ -32,8 +32,8 @@ class User {
         int get_fd() const;
         int get_id() const;
         std::string get_nick() const;
-    std::string get_host() const;
-    std::string get_nickOp() const;
+        std::string get_host() const;
+        std::string get_nickOp() const;
         std::string get_name() const;
         std::string get_pw() const;
         void set_nick(std::string nick);
@@ -41,7 +41,8 @@ class User {
         void set_name(std::string name);
         void setOperatorStatus(Channel &channel, bool isOperator);
         bool get_operatorStatus(Channel *channel) const;
-
+        void setInviteStatus(Channel &channel, bool isOperator);
+        bool get_InviteStatus(Channel *channel) const;
 
         void command_pass(Server &server);
         void command_nick(Server &server, s_message &message);
@@ -51,14 +52,16 @@ class User {
         void command_join(Server &server, s_message &message);
         void command_mode(Server &server, s_message &message);
         void command_privmsg(Server &server, s_message &message);
-
         void command_part(Server &server, s_message &message);
-    s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
-    s_flag *parserOption(std::string flags);
+        void command_kick(Server &server, s_message &message);
+        void command_invite(Server &server, s_message &message);
+
+        s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
+        s_flag *parserOption(std::string flags);
 
         void interpretMode(s_flag *parsed, std::vector<std::string> options);
-    void splitMessage(int fd, Server& server, std::string buf);
-    void parseMessage(Server &server);
+        void splitMessage(int fd, Server& server, std::string buf);
+        void parseMessage(Server &server);
     private:
 
         int _fd;
@@ -75,4 +78,5 @@ class User {
         Channel *_channel_rn;
         bool _isInAChannel;
         std::map<Channel*, bool> _operatorStatusMap; // TODO : remove in part
+        std::map<Channel *, bool> _isInvitedToChannel;
 };

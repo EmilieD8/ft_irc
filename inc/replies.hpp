@@ -1,21 +1,21 @@
 #pragma once
 #include "irc.hpp"
 
-# define ERR_PASSWDMISMATCH "464 : Incorrect password\r\n"
+# define ERR_PASSWDMISMATCH "464 :Password incorrect\r\n"
 
 # define NICK(old_nick, nick) (":" + old_nick + " NICK " + nick + "\r\n")
 
-# define ERR_NEEDMOREPARAMS(command) (command + ":Not enough parameters")
+# define ERR_NEEDMOREPARAMS(command) (command + ":Not enough parameters\r\n")
 
 # define RPL_WELCOME(nick, user, host) ("001 " + nick + " :Welcome to the Internet Relay Network " + nick + "!" + user + "@" + host + "\r\n")
 
 # define PONG(server) ("PONG :" + server + "\r\n")
 
-# define ERR_NOORIGIN(command) (command + ":No origin specified")
+# define ERR_NOORIGIN(command) (command + ":No origin specified\r\n")
 
 # define JOIN(nick, user, host, channel) (":" + nick + "!" + user + "@" + host  + " JOIN " + channel + "\r\n")
 
-# define ERR_NONICKNAMEGIVEN(command) (command + ":No nickname given")
+# define ERR_NONICKNAMEGIVEN(command) (command + ":No nickname given\r\n")
 
 # define ERR_NICKNAMEISUSE(nick) ("433 NICK :" + nick + "\r\n")
 
@@ -35,7 +35,7 @@
 
 # define PART(nick, user, host, chan) (":" + nick + "!" + user + "@" + host + " PART " + chan + "\r\n")
 
-# define ERR_USERNOTINCHANNEL(nick, chan) ("441 " + nick + " " + chan + " :They aren’t on that channel\r\n")
+# define ERR_USERNOTINCHANNEL(nick, chan) ("441 " + nick + " " + chan + ": They aren’t on that channel\r\n")
 
 # define RPL_CHANNELMODEIS(server, nick, channel, mode) (":" + server + " 324 " + nick + " " + channel + " " + mode + "\r\n")
 
@@ -44,3 +44,13 @@
 # define ERR_ERRONEUSNICKNAME(nick) ("432 " + nick + " :Erroneous nickname\r\n")
 
 # define RPL_YOUREOPER(nick) ("381 " + nick + " :You are now an IRC operator\r\n")
+
+# define KICK(nick, user, host, chan, kicked, reason) (":" + nick + "!" + user + "@" + host + " KICK " + chan + " " + kicked + " :" + reason + "\r\n")
+
+# define INVITE(nick, user, host, nickinvite, channel)  (":" + nick + "!" + user + "@" + host + " INVITE " + nickinvite + " " + channel + "\r\n")
+
+# define ERR_NOSUCHNICK(invitenick) ("401 " + invitenick + " :No such nick/channel\r\n")
+
+# define ERR_USERONCHANNEL(nick, invitenick, chan) ("443 " + nick + " " + invitenick + " " + chan + ":is already on channel\r\n")
+
+# define ERR_INVITEONLYCHAN(nick, chan) ("473 " + nick + " " + chan + " :Cannot join channel (+i)\r\n")
