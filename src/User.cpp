@@ -220,7 +220,7 @@ void User::command_nick(Server &server, s_message &message) {
     if (_nick.empty() && (message._params.find(' ') != std::string::npos || message._params.size() > 9))
         new_nick = new_nick.substr(0, 9);
     if (message._params.find(' ') != std::string::npos || message._params.size() > 9) {
-        send(_fd, ERR_ERRONEUSNICKNAME(_nick).c_str(), ERR_ERRONEUSNICKNAME(_nick).size(), 0);
+        send(_fd, ERR_ERRONEUSNICKNAME(new_nick).c_str(), ERR_ERRONEUSNICKNAME(new_nick).size(), 0);
         return ;
     }
     std::string old = get_nick();
@@ -231,19 +231,19 @@ void User::command_nick(Server &server, s_message &message) {
     std::vector <User *> clients = server.get_clients();
     for (std::vector<User *>::iterator it = clients.begin(); it != clients.end(); it++) {
         if ((*it)->get_nick().compare(new_nick) == 0) {
-            send(_fd, ERR_NICKNAMEISUSE(new_nick).c_str(),ERR_NICKNAMEISUSE(new_nick).size(), 0);
-            new_nick = new_nick.substr(0, new_nick.size() - 1);
+            //send(_fd, ERR_NICKNAMEISUSE(new_nick).c_str(),ERR_NICKNAMEISUSE(new_nick).size(), 0);
+            if (i != 0)
+                new_nick = new_nick.substr(0, new_nick.size() - 1);
             new_nick += std::to_string(i);
             i++;
-            set_nick(new_nick);
-            send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
-            return ;
+            break;
         }
     }
     std::string newNickOp = "@" + new_nick; // are we still using it ?
+    if (!_nick.empty())
+        send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
     set_nick(new_nick);
     set_nickOp(newNickOp);
-    send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
     return ;
 }
 
@@ -280,6 +280,7 @@ void User::command_user(Server &server, s_message &message) {
         send(_fd, ERR_NEEDMOREPARAMS(message._command).c_str(), ERR_NEEDMOREPARAMS(message._command).size() , 0);
         return ;
     }
+    std::cout << _nick << std::endl;
     send(_fd, RPL_WELCOME(_nick, _name, _hostName).c_str(), RPL_WELCOME(_nick, _name, _hostName).size(), 0);
     return ;
 }
