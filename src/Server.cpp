@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: emilie <emilie@student.42.fr>              +#+  +:+       +#+        */
+/*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/12 16:10:39 by emilie           ###   ########.fr       */
+/*   Updated: 2023/12/19 14:35:49 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,8 +63,7 @@ void Server::init() {
     _server.fd = socket(AF_INET, SOCK_STREAM, 0);
     if (_server.fd < 0)
         throw std::runtime_error("Error establishing the socket...");
-    int setting = fcntl(_server.fd, F_GETFL, 0);
-    fcntl(_server.fd, F_SETFL, setting | O_NONBLOCK);
+    fcntl(_server.fd, F_SETFL, O_NONBLOCK);
 
     _server.addr.sin_family = AF_INET;
     if (_port < 1500)
@@ -105,8 +104,7 @@ void Server::connect() {
     if (new_connection == -1)
         throw std::runtime_error("Accepting failed");
 
-    int setting = fcntl(new_connection, F_GETFL, 0);
-    fcntl(new_connection, F_SETFL, setting | O_NONBLOCK);
+    fcntl(new_connection, F_SETFL, O_NONBLOCK);
 
     if (_num_clients == maxClients)
         throw std::runtime_error("Too many clients");

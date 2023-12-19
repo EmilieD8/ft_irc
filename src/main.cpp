@@ -25,9 +25,7 @@ int main(int argc, char **argv)
  * change everything which is critical into exceptions
  *                                                                          command kick --> DONE
  *                                                                          command invite
- * command quit
- * ban?
- * kill?
+ *                                      command quit
  *                                                                          nickname -> check if already taken and add symbol --> DONE
  *                                                                          nickname + user -> check if valid --> DONE
  *                                                                          join channel -> topic sent (to be checked) --> DONE
@@ -36,7 +34,7 @@ int main(int argc, char **argv)
  * leaks, take care of the proper destructor
  * operator status -> add @ to the nickname
  * mode -> +o -o + parsing to be corrected
- * mode -> all of them to be implemented inside the channels
+ *                                                                          mode -> all of them to be implemented inside the channels --> DONE
  * send proper error message (to be checked)
  * cleanup variables not used
  * welcome message

@@ -313,20 +313,40 @@ void User::command_join(Server &server, s_message &message) {
     std::cout << "command_join function checked" << std::endl;
     //TODO : check if we have the param we need;
     int i = 0;
+    std::stringstream ss(message._params);
+    std::string channelName;
+    std::string password;
+    std::string word;
+    int count = 0;
+    while (ss >> word) {
+        if (count == 0)
+            channelName = word;
+        else
+            password = word;
+        count++;
+    }
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
-        if ((*it)->get_name() == message._params) {
+        if ((*it)->get_name() == channelName) {
             if ((*it)->get_limitSet() == true) {
-                if ((*it)->get_userSize() > (*it)->get_limit()) {
-                    send(_fd, ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).c_str(), ERR_CHANNELISFULL(_nick, _channel_rn->get_name()).size(), 0);
+                if ((*it)->get_userSize() + 1 > (*it)->get_limit()) {
+                    send(_fd, ERR_CHANNELISFULL(_nick, channelName).c_str(), ERR_CHANNELISFULL(_nick, channelName).size(), 0);
                     return;
                 }
             }
             if ((*it)->get_inviteOnly() == true) {
                 if (this->get_InviteStatus(*it) == false) {
-                    send(_fd, ERR_INVITEONLYCHAN(_nick, message._params).c_str(), ERR_INVITEONLYCHAN(_nick, message._params).size(), 0);
+                    send(_fd, ERR_INVITEONLYCHAN(_nick, channelName).c_str(), ERR_INVITEONLYCHAN(_nick, channelName).size(), 0);
                     return;
                 }
             }
+            if((*it)->get_keySet() == true) {
+                if ((*it)->get_password() != password)
+                {
+                    send(_fd, ERR_BADCHANNELKEY(_nick, channelName).c_str(), ERR_BADCHANNELKEY(_nick, channelName).size(), 0);
+                    return;
+                }
+            }
+            std::cout << "                             after " << std::endl;
             (*it)->add_user(*this);
             set_channel_atm(**it);
             setOperatorStatus(**it, false);
@@ -340,7 +360,7 @@ void User::command_join(Server &server, s_message &message) {
             i++;
     }
     if (i == server.get_channels().size()) {
-        Channel *channel = new Channel(message._params);
+        Channel *channel = new Channel(channelName);
         channel->add_user(*this);
         set_channel_atm(*channel);
         setOperatorStatus(*channel, true);
@@ -566,7 +586,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (changed_plus == false) {
                 send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
                      ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0); // TODO
-                continue;
+                continue; // ?
             }
             i++;
         }
@@ -589,14 +609,14 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
                 send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
                      ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0);
                 // TODO
-                continue;
+                continue; // ?
             }
             i++;
         }
         else
         {
-            send(_fd, ERR_UMODEUNKNOWNFLAG(this->_nick).c_str(), ERR_UMODEUNKNOWNFLAG(this->_nick).size(), 0);
-            //TODO
+            send(_fd, ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).c_str(), ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).size(), 0);
+ //TODO
         }
         //TODO : parsing not correct ?
         parsed = parsed->next;
