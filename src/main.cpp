@@ -24,7 +24,7 @@ int main(int argc, char **argv)
  *                                                                          if wrong password, should not throw exception closing the whole program -->DONE
  * change everything which is critical into exceptions
  *                                                                          command kick --> DONE
- * command invite
+ *                                                                          command invite
  * command quit
  * ban?
  * kill?
@@ -43,4 +43,5 @@ int main(int argc, char **argv)
  * who is ?
  * set the cout correctly
  * "Cannot use this command in that context"
+ * 
  * */

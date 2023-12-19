@@ -55,6 +55,7 @@ class User {
         void command_part(Server &server, s_message &message);
         void command_kick(Server &server, s_message &message);
         void command_invite(Server &server, s_message &message);
+        void command_quit(Server &server, s_message &message);
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
         s_flag *parserOption(std::string flags);

@@ -54,6 +54,10 @@ std::vector<Channel *> &Server::get_channels() {
     return _channels;
 }
 
+void Server::decrease_num_clients(int i) {
+    _num_clients -= i;
+}
+
 void Server::init() {
     std::cout << "Initializing..." << std::endl;
     _server.fd = socket(AF_INET, SOCK_STREAM, 0);

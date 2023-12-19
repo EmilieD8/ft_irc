@@ -141,7 +141,7 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
 }
 
 void User::parseMessage(Server &server) {
-    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "PART", "/INVALID"};
+    std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "PART", "QUIT", "/INVALID"};
     int count = 0;
     size_t arraySize = sizeof(type) / sizeof(type[0]);
     std::cout << "Command : " << _message._command << std::endl;
@@ -190,6 +190,9 @@ void User::parseMessage(Server &server) {
             command_part(server, this->_message);
             break;
         case 12:
+            command_quit(server, this->_message);
+            break;
+        case 13:
             std::cout << "Error: invalid command" << std::endl;// check if correct. maybe to put the help ? 
             break;
     }
@@ -788,6 +791,34 @@ void User::command_invite(Server &server, s_message &message) {
 
 
 }
+
+void User::command_quit(Server &server, s_message &message) {
+    std::cout << "command_quit function checked" << std::endl;
+    for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
+            if ((*it2)->get_nick() == _nick) {
+                if (message._params.empty())
+                    (*it)->send_to_all_macro(PART(_nick, _name, _hostName, (*it)->get_name()));
+                else
+                    (*it)->send_to_all_macro(PART_REASON(_nick, _name, _hostName, (*it)->get_name(), message._params));
+                (*it)->remove_user(*this);
+                break;
+            }
+        }
+    }
+    send(_fd, QUIT(_nick, _name, _hostName).c_str(), QUIT(_nick, _name, _hostName).size(), 0);
+    for (std::vector<User *>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
+        if ((*it)->get_nick() == _nick) {
+            close(_fd);
+            server.get_clients().erase(it);
+            server.decrease_num_clients(1);
+            delete this;
+            break;
+        }
+    }
+}
+
+
 /*irc interpretation : 
 * /mode +t +l ==> send "+tl"
 * /mode +t +l 10 +o mimi ==> send #CHANNEL +tlo 10 mimi
