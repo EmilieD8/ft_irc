@@ -417,7 +417,6 @@ void User::command_mode(Server &server, s_message &message) {
     std::string flags = "\0";
     std::vector<std::string> optionsArray;
     int count = 0;
-    std::cout << "CHECK             " << message._params << std::endl;
     while (ss >> word) {
         if (count == 0 && _isInAChannel == true && word != _channel_rn->get_name())
             flags = word;
@@ -431,12 +430,23 @@ void User::command_mode(Server &server, s_message &message) {
     }
     if (_isInAChannel == false)
     {
+        int i = 0;
         for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++)
         {
             if ((*it)->get_name() == channel)
-            
+            {
+                if (get_operatorStatus((*it)) == false)
+                {
+                    send(_fd, ERR_CHANOPRIVSNEEDED(channel).c_str(), ERR_CHANOPRIVSNEEDED(channel).size(), 0);
+                }
+
+
+
+            }
+            i++;
+
         }
-        if (get_operatorStatus(channel))
+        ERR_NOTONCHANNEL
         //is not in a channel, cannot use this command;
         // check for the channel flag and then act
         std::cout << "Cannot use this command in that context" << std::endl; //TODO :
