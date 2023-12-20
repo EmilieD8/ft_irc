@@ -430,23 +430,26 @@ void User::command_mode(Server &server, s_message &message) {
     }
     if (_isInAChannel == false)
     {
-        int i = 0;
         for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++)
         {
             if ((*it)->get_name() == channel)
             {
-                if (get_operatorStatus((*it)) == false)
+                for (std::vector <User *>::iterator it = (*it).get_users().begin(); it != (*it).get_users().end(); it++)
                 {
-                    send(_fd, ERR_CHANOPRIVSNEEDED(channel).c_str(), ERR_CHANOPRIVSNEEDED(channel).size(), 0);
+                    if ((*it) == _nick)
+                    {
+                        if (get_operatorStatus((*it)) == false) {
+                            send(_fd, ERR_CHANOPRIVSNEEDED(channel).c_str(), ERR_CHANOPRIVSNEEDED(channel).size(), 0);
+                            return;
+                        }    
+                        //euhhhh else what  
+                    }
                 }
-
-
-
+                send(_fd, ERR_NOTONCHANNEL(channel).c_str(), ERR_NOTONCHANNEL(channel).size(), 0);
+                return;
             }
-            i++;
-
         }
-        ERR_NOTONCHANNEL
+        
         //is not in a channel, cannot use this command;
         // check for the channel flag and then act
         std::cout << "Cannot use this command in that context" << std::endl; //TODO :
