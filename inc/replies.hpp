@@ -66,3 +66,5 @@
 # define RPL_NAMREPLY(nick, user, host, channel) ("353 " + nick + "!" + user + "@" + host + " = " + channel + " :")
 
 # define RPL_ENDOFNAMES(nick, user, host, channel) ("366 " + nick + "!" + user + "@" + host + " " + channel + " :End of NAMES list\r\n")
+
+# define ERR_NOSUCHCHANNEL(channel) ("403 " + channel + " :No such channel\r\n")

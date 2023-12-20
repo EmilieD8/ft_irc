@@ -417,6 +417,7 @@ void User::command_mode(Server &server, s_message &message) {
     std::string flags = "\0";
     std::vector<std::string> optionsArray;
     int count = 0;
+    Channel *channel_ptr;
     while (ss >> word) {
         if (count == 0 && _isInAChannel == true && word != _channel_rn->get_name())
             flags = word;
@@ -428,34 +429,46 @@ void User::command_mode(Server &server, s_message &message) {
             optionsArray.push_back(word);
         count++;
     }
+    bool skipped = false;
     if (_isInAChannel == false)
     {
         for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++)
         {
             if ((*it)->get_name() == channel)
             {
-                for (std::vector <User *>::iterator it = (*it).get_users().begin(); it != (*it).get_users().end(); it++)
+                channel_ptr = (*it);
+                for (std::vector <User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++)
                 {
-                    if ((*it) == _nick)
+                    if ((*it2)->get_nick() == _nick)
                     {
                         if (get_operatorStatus((*it)) == false) {
                             send(_fd, ERR_CHANOPRIVSNEEDED(channel).c_str(), ERR_CHANOPRIVSNEEDED(channel).size(), 0);
                             return;
                         }    
-                        //euhhhh else what  
+                        else
+                        {
+                            skipped = true;
+                            break;
+                        } 
                     }
                 }
-                send(_fd, ERR_NOTONCHANNEL(channel).c_str(), ERR_NOTONCHANNEL(channel).size(), 0);
-                return;
+                if (skipped != true)
+                {
+                    send(_fd, ERR_NOTONCHANNEL(channel).c_str(), ERR_NOTONCHANNEL(channel).size(), 0);
+                    return;
+                }
+                break;
             }
         }
-        
-        //is not in a channel, cannot use this command;
-        // check for the channel flag and then act
-        std::cout << "Cannot use this command in that context" << std::endl; //TODO :
-        return;
+        if (skipped == false) {
+            std::string test = _nick + " +i";
+            if (message._params == test)
+                return;
+            send(_fd, ERR_NOSUCHCHANNEL(channel).c_str(), ERR_NOSUCHCHANNEL(channel).size(), 0);
+            return;
+        }
     }
-    if (flags != "\0" && get_operatorStatus(_channel_rn) == false)
+    if (flags != "\0" && _isInAChannel == true && get_operatorStatus(_channel_rn) == false)
     {
         send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
         return;
@@ -463,7 +476,7 @@ void User::command_mode(Server &server, s_message &message) {
     s_flag *parsed;
     if (flags[0] == '+' || flags[0] == '-') {
         parsed = parserOption(flags);
-        interpretMode(parsed, optionsArray);
+        interpretMode(parsed, optionsArray, (*_channel_rn));
         s_flag *currentFlag = parsed;
         while (currentFlag != nullptr){
             s_flag *nextFlag = currentFlag->next;
@@ -484,42 +497,42 @@ void User::command_mode(Server &server, s_message &message) {
 // unknown mode flag :         472     ERR_UNKNOWNMODE => let's return the list of mode that we can write
 //         221     RPL_UMODEIS
 
-void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
+void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel)
 {
     int i = 0;
     while(parsed != nullptr)
     {
         if (parsed->flag == 't' && parsed->sign == 1)
         {
-            if (_channel_rn->get_topicRestricted() == false)
+            if (channel.get_topicRestricted() == false)
             {
-                _channel_rn->set_topicRestricted(true);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "+t"));
+                channel.set_topicRestricted(true);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "+t"));
             }
         }
         else if (parsed->flag == 't' && parsed->sign == 2)
         {
-            if (_channel_rn->get_topicRestricted() == true)
+            if (channel.get_topicRestricted() == true)
             {
-                _channel_rn->set_topicRestricted(false);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-t"));
+                channel.set_topicRestricted(false);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-t"));
 
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 1)
         {
-            if (_channel_rn->get_inviteOnly() == false)
+            if (channel.get_inviteOnly() == false)
             {
-                _channel_rn->set_inviteOnly(true);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "+i"));
+                channel.set_inviteOnly(true);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "+i"));
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 2)
         {
-            if (_channel_rn->get_inviteOnly() == true)
+            if (channel.get_inviteOnly() == true)
             {
-                _channel_rn->set_inviteOnly(false);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-i"));
+                channel.set_inviteOnly(false);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-i"));
             }
         }
         else if (parsed->flag == 'l' && parsed->sign == 1)
@@ -527,10 +540,10 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             try
             {
                 int limit = std::stoi(options[i]);
-                _channel_rn->set_limitSet(true);
-                _channel_rn->set_limit(limit);
+                channel.set_limitSet(true);
+                channel.set_limit(limit);
                 std::string flags = "+l " + std::to_string(limit);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), flags));
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
             }
             catch(const std::exception& e)
             {
@@ -540,20 +553,20 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
         }
         else if (parsed->flag == 'l' && parsed->sign == 2)
         {
-            if (_channel_rn->get_limitSet() == true)
+            if (channel.get_limitSet() == true)
             {
-                _channel_rn->set_limitSet(false);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-l"));
+                channel.set_limitSet(false);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-l"));
             }
         }
         else if (parsed->flag == 'k' && parsed->sign == 1)
         {
             try
             {
-                _channel_rn->set_keySet(true);
-                _channel_rn->set_password(options[i]);
+                channel.set_keySet(true);
+                channel.set_password(options[i]);
                 std::string flags = "+k " + options[i];
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), flags));
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
             }
             catch(const std::exception& e)
             {
@@ -563,10 +576,10 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
         }
         else if (parsed->flag == 'k' && parsed->sign == 2)
         {
-            if (_channel_rn->get_keySet() == true)
+            if (channel.get_keySet() == true)
             {
-                _channel_rn->set_keySet(false);
-                _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, _channel_rn->get_name(), "-k"));
+                channel.set_keySet(false);
+                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-k"));
             }
         }
         else if (parsed->flag == 'o' && parsed->sign == 1)
@@ -574,20 +587,20 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             std::string nickname = options[i];
             std::string flags = "+o " + options[i];
             bool changed_plus = false;
-            for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
+            for (std::vector<User *>::iterator it = channel.get_users().begin(); it != channel.get_users().end(); it++)
             {
                 if ((*it)->get_nick() == nickname)
                 {
                     (*it)->setOperatorStatus(*_channel_rn, true);
                     send(_fd,RPL_YOUREOPER(_nick).c_str(), RPL_YOUREOPER(_nick).size(), 0);
                     changed_plus = true;
-                    _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, _channel_rn->get_name(), flags));
+                    channel.send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, channel.get_name(), flags));
                     break;
                 }
             }
             if (changed_plus == false) {
-                send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
-                     ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0); // TODO
+                send(_fd, ERR_USERNOTINCHANNEL(nickname, channel.get_name()).c_str(),
+                     ERR_USERNOTINCHANNEL(nickname, channel.get_name()).size(), 0); // TODO
                 continue; // ?
             }
             i++;
@@ -597,19 +610,19 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             std::string nickname = options[i];
             std::string flags = "-o " + options[i];
             bool changed_minus = false;
-            for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
+            for (std::vector<User *>::iterator it = channel.get_users().begin(); it != channel.get_users().end(); it++)
             {
                 if ((*it)->get_nick() == nickname)
                 {
                     (*it)->setOperatorStatus(*_channel_rn, false);
                     changed_minus = true;
-                    _channel_rn->send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, _channel_rn->get_name(), flags));
+                    channel.send_to_all_macro(RPL_CHANNELMODEIS(this->_serverName, this->_nick, channel.get_name(), flags));
                     break;
                 }
             }
             if (changed_minus == false) {
-                send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
-                     ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0);
+                send(_fd, ERR_USERNOTINCHANNEL(nickname, channel.get_name()).c_str(),
+                     ERR_USERNOTINCHANNEL(nickname, channel.get_name()).size(), 0);
                 continue;
             }
             i++;
