@@ -33,11 +33,9 @@ class User {
         int get_id() const;
         std::string get_nick() const;
         std::string get_host() const;
-        std::string get_nickOp() const;
         std::string get_name() const;
         std::string get_pw() const;
         void set_nick(std::string nick);
-        void set_nickOp(std::string nick);
         void set_name(std::string name);
         void setOperatorStatus(Channel &channel, bool isOperator);
         bool get_operatorStatus(Channel *channel) const;
@@ -68,7 +66,6 @@ class User {
         int _fd;
         int id;
         std::string _nick;
-        std::string _nickOp;
         std::string _name;
         std::string _realName;
         std::string _hostName;

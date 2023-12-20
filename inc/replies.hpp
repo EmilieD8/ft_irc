@@ -62,3 +62,7 @@
 # define QUIT_REASON(nick, user, host, msg) (nick + "!" + user + "@" + host  + " QUIT :" + msg + "\r\n")
 
 # define ERR_BADCHANNELKEY(nick, chan) ("475 " + nick + " " + chan + " :Cannot join channel (+k)\r\n")
+
+# define RPL_NAMREPLY(nick, user, host, channel) ("353 " + nick + "!" + user + "@" + host + " = " + channel + " :")
+
+# define RPL_ENDOFNAMES(nick, user, host, channel) ("366 " + nick + "!" + user + "@" + host + " " + channel + " :End of NAMES list\r\n")

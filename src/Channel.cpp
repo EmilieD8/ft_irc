@@ -116,8 +116,9 @@ void Channel::set_keySet(bool key) {
 
 void Channel::send_to_all_private(std::string msg, User *user, std::string sender) {
  // make sure that _users is not empty and is in channel
+ std::cout << "                                 CHECK" << std::endl;
     for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-        if (((*it)->get_nick() != user->get_nick() && (*it)->get_nick() != user->get_nickOp()) && (*it)->get_channel_atm()->get_name() == this->get_name())
+        if (((*it)->get_nick() != user->get_nick()) && (*it)->get_channel_atm()->get_name() == this->get_name())
             send((*it)->get_fd(), PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg).c_str(),
                  PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg).size(), 0 );
 

@@ -4,7 +4,6 @@ User::User() {
     _isInAChannel = false;
     _channel_rn = NULL;
     _nick = "\0";
-    _nickOp = "\0";
     _name = "\0";
     _pw = "\0";
     _realName = "\0";
@@ -17,7 +16,6 @@ User::User(int fd, int id) : _fd(fd), id(id)  {
     _isInAChannel = false;
     _channel_rn = NULL;
     _nick = "\0";
-    _nickOp = "\0";
     _name = "\0";
     _pw = "\0";
     _realName = "\0";
@@ -55,11 +53,6 @@ int User::get_id() const {
 std::string User::get_nick() const {
     return _nick;
 }
-
-std::string User::get_nickOp() const {
-    return _nickOp;
-}
-
 std::string User::get_name() const {
     return _name;
 }
@@ -106,10 +99,6 @@ Channel *User::get_channel_atm() const {
 }
 void User::set_nick(std::string nick) {
     _nick = nick;
-}
-
-void User::set_nickOp(std::string nickOp) {
-    _nickOp = nickOp;
 }
 
 void User::set_name(std::string name) {
@@ -203,12 +192,9 @@ void User::command_pass(Server &server) {
 
     if (_message._params.compare(server.get_password()) != 0) {
         send(_fd, ERR_PASSWDMISMATCH, 26, 0);
-        //server.set_exit_status(true);
-        //throw std::runtime_error("Error wrong password");
     }
     else
         _passwordChecked = true;
-    // TODO: maybe create a while loop to give three more tries to connect with the right password
 }
 
 void User::command_nick(Server &server, s_message &message) {
@@ -239,11 +225,9 @@ void User::command_nick(Server &server, s_message &message) {
             break;
         }
     }
-    std::string newNickOp = "@" + new_nick; // are we still using it ?
     if (!_nick.empty())
         send(_fd, NICK(old, new_nick).c_str(), NICK(old, new_nick).size(), 0);
     set_nick(new_nick);
-    set_nickOp(newNickOp);
     return ;
 }
 
@@ -295,24 +279,9 @@ void User::command_ping(Server &server, s_message &message) {
         send(_fd, PONG(_message._params).c_str(), PONG(_message._params).size(), 0);
 }
 
-
-/*
- * TODO:
- * check if channel already exists or otherwise create it
- * proper name? Test vs #Test
- * Test if a user is already in that channel -> should not be added twice
- * different modes ONLY FOR CHANNELS OPERATORS:
- * format : 
- * /mode #channel +t => +t (topic): When set, only channel operators can change the channel topic.
- * /mode #channel +i => Set/remove Invite-only channel
- * /mode #channel +k password => k: Set/remove the channel key (password)
- * /mode #channel +o nickname => o: Give/take channel operator privilege
- * /mode #channel +l limit => l: Set/remove the user limit to channel
- */
-
 void User::command_join(Server &server, s_message &message) {
     std::cout << "command_join function checked" << std::endl;
-    //TODO : check if we have the param we need;
+    //TODO : check if we have the param we need; #name channel
     int i = 0;
     std::stringstream ss(message._params);
     std::string channelName;
@@ -347,14 +316,21 @@ void User::command_join(Server &server, s_message &message) {
                     return;
                 }
             }
-            std::cout << "                             after " << std::endl;
             (*it)->add_user(*this);
             set_channel_atm(**it);
             setOperatorStatus(**it, false);
-            send(_fd, JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).c_str(),
-                JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()).size(), 0);
+            _channel_rn->send_to_all_macro(JOIN(this->get_nick(), this->get_name(), _hostName, (*it)->get_name()));   
             if (_channel_rn->get_topic().empty() == false)
                 send(_fd, RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(),  _channel_rn->get_topic()).c_str(), RPL_TOPIC(_nick, _name, _hostName, _channel_rn->get_name(), _channel_rn->get_topic()).size(), 0);
+            std::string usersInChannel;
+            for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++) {
+                if ((*it)->get_operatorStatus(_channel_rn) == true)
+                    usersInChannel += "@" +(*it)->get_nick() + " ";
+                else
+                    usersInChannel += (*it)->get_nick() + " ";
+            }
+            send(_fd, (RPL_NAMREPLY(_nick, _name, _hostName, _channel_rn->get_name()) + usersInChannel + "\r\n").c_str(), (RPL_NAMREPLY(_nick, _name, _hostName, _channel_rn->get_name()) + usersInChannel + "\r\n").size(), 0);
+            send(_fd, RPL_ENDOFNAMES(_nick, _name, _hostName, _channel_rn->get_name()).c_str(), RPL_ENDOFNAMES(_nick, _name, _hostName, _channel_rn->get_name()).size(), 0);
             break;
         } 
         else
@@ -365,10 +341,11 @@ void User::command_join(Server &server, s_message &message) {
         channel->add_user(*this);
         set_channel_atm(*channel);
         setOperatorStatus(*channel, true);
+        std::string usersInChannel = "@" + _nick;
         send(_fd, RPL_YOUREOPER(_nick).c_str(), RPL_YOUREOPER(_nick).size(), 0);
-// TODO: need to add @ to the nickname
-        send(_fd, JOIN(_nick, _name, _hostName, channel->get_name()).c_str(),
-                JOIN(_nick, _name, _hostName, channel->get_name()).size(), 0);
+        send(_fd, JOIN(_nick, _name, _hostName, channel->get_name()).c_str(), JOIN(_nick, _name, _hostName, channel->get_name()).size(), 0);
+        send(_fd, (RPL_NAMREPLY(_nick, _name, _hostName, _channel_rn->get_name()) + usersInChannel + "\r\n").c_str(), (RPL_NAMREPLY(_nick, _name, _hostName, _channel_rn->get_name()) + usersInChannel + "\r\n").size(), 0);
+        send(_fd, RPL_ENDOFNAMES(_nick, _name, _hostName, _channel_rn->get_name()).c_str(), RPL_ENDOFNAMES(_nick, _name, _hostName, _channel_rn->get_name()).size(), 0);
         server.get_channels().push_back(channel);
     }
 }
@@ -434,49 +411,60 @@ void User::command_topic(Server &server, s_message &message) {
 void User::command_mode(Server &server, s_message &message) {
     std::cout << "command_mode function checked" << std::endl;
 
-    if (_isInAChannel == false)
-    {
-        //is not in a channel, cannot use this command;
-        std::cout << "Cannot use this command in that context" << std::endl; //TODO :
-        return;
-    }
-    if (get_operatorStatus(_channel_rn) == false)
-    {
-        send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
-        return;
-    }
     std::stringstream ss(message._params);
     std::string word;
-    std::string flags;
+    std::string channel;
+    std::string flags = "\0";
     std::vector<std::string> optionsArray;
     int count = 0;
+    std::cout << "CHECK             " << message._params << std::endl;
     while (ss >> word) {
-        if (count == 0 && word.compare(_channel_rn->get_name()) != 0)
+        if (count == 0 && _isInAChannel == true && word != _channel_rn->get_name())
             flags = word;
+        else
+            channel = word;
         if (count == 1)
             flags += word;
         else if (count != 0)
             optionsArray.push_back(word);
         count++;
     }
-    //parser
-    s_flag *parsed;
-    if (flags[0] == '+' || flags[0] == '-')
-        parsed = parserOption(flags);
-    else
+    if (_isInAChannel == false)
     {
-        send(_fd, ERR_NEEDMOREPARAMS(message._command).c_str(), ERR_NEEDMOREPARAMS(message._command).size(), 0);
+        for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++)
+        {
+            if ((*it)->get_name() == channel)
+            
+        }
+        if (get_operatorStatus(channel))
+        //is not in a channel, cannot use this command;
+        // check for the channel flag and then act
+        std::cout << "Cannot use this command in that context" << std::endl; //TODO :
         return;
     }
-    interpretMode(parsed, optionsArray);
-    
-    s_flag *currentFlag = parsed;
-    while (currentFlag != nullptr)
+    if (flags != "\0" && get_operatorStatus(_channel_rn) == false)
     {
-        s_flag *nextFlag = currentFlag->next;
-        delete currentFlag;
-        currentFlag = nextFlag; 
+        send(_fd, ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).c_str(), ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()).size(), 0);
+        return;
     }
+    s_flag *parsed;
+    if (flags[0] == '+' || flags[0] == '-') {
+        parsed = parserOption(flags);
+        interpretMode(parsed, optionsArray);
+        s_flag *currentFlag = parsed;
+        while (currentFlag != nullptr){
+            s_flag *nextFlag = currentFlag->next;
+            delete currentFlag;
+            currentFlag = nextFlag; 
+        }
+    }
+    // else if (flags.empty() == true)
+    // {
+    //     std::cout << "MODE function with just channel" << std::endl;
+    // }
+    // else
+    //     send(_fd, ERR_NEEDMOREPARAMS(message._command).c_str(), ERR_NEEDMOREPARAMS(message._command).size(), 0);
+    // PROPOSITION : I suggest we just don't do anything if so since the client send empty mode sometimes, and the error message should not appear;
     return;
 }
 
@@ -485,7 +473,7 @@ void User::command_mode(Server &server, s_message &message) {
 
 void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
 {
-    int i = 0; // iterator for the vector;
+    int i = 0;
     while(parsed != nullptr)
     {
         if (parsed->flag == 't' && parsed->sign == 1)
@@ -609,16 +597,12 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options)
             if (changed_minus == false) {
                 send(_fd, ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).c_str(),
                      ERR_USERNOTINCHANNEL(nickname, _channel_rn->get_name()).size(), 0);
-                // TODO
-                continue; // ?
+                continue;
             }
             i++;
         }
         else
-        {
             send(_fd, ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).c_str(), ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).size(), 0);
- //TODO
-        }
         //TODO : parsing not correct ?
         parsed = parsed->next;
     }
@@ -679,41 +663,33 @@ void User::command_privmsg(Server &server, s_message &message) {
     std::cout << "Command privmsg reached" << std::endl;
     std::stringstream ss(message._params);
     std::string word;
-    std::string user;
+    std::string user = "\0";
     std::string msg;
     int count = 0;
     while (ss >> word) {
-        if (count == 1 && word[0] != ':')
+        if (count == 0 && word != _channel_rn->get_name())
             user = word;
         else if (count != 0)
             msg += word + " ";
         count++;
     }
-    if (user.empty() == true)
-    {
-        if (get_operatorStatus(_channel_rn) == false)
-            _channel_rn->send_to_all_private(message._params, this,_nick);
-        else
-            _channel_rn->send_to_all_private(message._params,this, _nickOp);
-    }
+    msg = msg.substr(1); // this takes out the ":" in front of the message
+    if (user == "\0")
+        _channel_rn->send_to_all_private(msg,this, _nick);
     else
     {
         for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++)
         {
             if ((*it)->get_nick() == user)
             {
-                if (get_operatorStatus(_channel_rn) == false)
-                {
-                    send((*it)->get_fd(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
-                    send(_fd, PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
-                }
-                else
-                {
-                    send(_fd, PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
-                    send((*it)->get_fd(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nickOp, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
-                }
-                return;
+                send(_fd, PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
+                send((*it)->get_fd(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).c_str(), PRIVMSG(_nick, _name, _hostName, _channel_rn->get_name(), msg).size(), 0);
             }
+            // else
+            // {
+            //     //user not in the channel
+            //     break;
+            // }
         }
     }
 }
@@ -723,13 +699,11 @@ void User::command_part(Server &server, s_message &message) {
         send(_fd, ERR_USERNOTINCHANNEL(_nick, message._params).c_str(), ERR_USERNOTINCHANNEL(_nick, message._params).size(), 0);
         return;
     }
-    send(_fd, PART(_nick, _name, _hostName, _channel_rn->get_name()).c_str(), PART(_nick, _name, _hostName, _channel_rn->get_name()).size(), 0);
+    _channel_rn->send_to_all_macro(PART(_nick, _name, _hostName, _channel_rn->get_name()));
     _channel_rn->remove_user(*this);
     _channel_rn = NULL;
     _isInAChannel = false;
     setInviteStatus(*_channel_rn, false);
-    //TODO : need to check if the user is in the channel or not
-    //TODO : lose operator status if the user is operator
 }
 
 void User::command_kick(Server &server, s_message &message) {

@@ -22,24 +22,39 @@ int main(int argc, char **argv)
 
 /*TODO :
  *                                                                          if wrong password, should not throw exception closing the whole program -->DONE
- * change everything which is critical into exceptions
  *                                                                          command kick --> DONE
  *                                                                          command invite
- *                                      command quit
  *                                                                          nickname -> check if already taken and add symbol --> DONE
  *                                                                          nickname + user -> check if valid --> DONE
  *                                                                          join channel -> topic sent (to be checked) --> DONE
  *                                                                          private messages ->first user does not send --> DONE
- * private messages from user to user (different argv ? )
- * leaks, take care of the proper destructor
- * operator status -> add @ to the nickname
- * mode -> +o -o + parsing to be corrected
  *                                                                          mode -> all of them to be implemented inside the channels --> DONE
- * send proper error message (to be checked)
- * cleanup variables not used
- * welcome message
- * who is ?
- * set the cout correctly
- * "Cannot use this command in that context"
+ *                                                                          Wrong nick in welcome message --> DONE
+ *                                                                          Implementing password in channel --> DONE
  * 
+ *                                                                          Message when joining channel with list of users --> DONE
+ *                                                                          Loop for password at connection --> DOES NOT WORK, IDEA DEPRECATED
+ * "Cannot use this command in that context"
+ *                                                                          Message when new user is joining the channel ? --> DONE
+ *                                                                          operator status -> add @ to the nickname --> DONE
+ * mode -> +o -o + parsing to be corrected
+ * private messages from user to user (different argv ?)
+ * who is ?
+ * if nobody else in channel, channel is deleted
+ *                                      command quit
+ * Lag time after quit
+ * 
+ * 
+ * Change the parsing into a 2D array
+ * signals
+ * welcome message to be personalized
+ * 
+ * set the cout correctly / colors
+ * change everything which is critical into exceptions
+ * cleanup variables not used
+ * Align the "this->_nick", "get_nick()" and "_nick"
+ * send proper error message (to be checked)
+ * leaks, take care of the proper destructor
+ * Private vs public attributes to be organized
  * */
+
