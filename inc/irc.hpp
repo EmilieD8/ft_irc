@@ -30,6 +30,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <sstream>
+#include <algorithm>
 
 #include "Server.hpp"
 #include "User.hpp"

@@ -50,6 +50,9 @@ std::vector<User*> &Server::get_clients() {
     return _clients;
 }
 
+std::vector<pollfd> * &Server::get_pollfds() {
+    return _pollfds;
+}
 std::vector<Channel *> &Server::get_channels() {
     return _channels;
 }
@@ -127,22 +130,28 @@ void Server::read_client()
             std::cout << "Reading..." << std::endl;
             char buf[BUFFER_SIZE];
             memset(buf, 0, sizeof(buf));
-            int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
-            if (bytes == -1)
-            {
-                if (errno == EWOULDBLOCK) // || errno == EAGAIN is forbidden
-                    {std::cout << "EWOULDBLOCK" << std::endl; continue;}
-                else
-                    throw std::runtime_error("Error reading inside loop");
+            try {
+                int bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
+                if (bytes == -1) {
+                    if (errno == EWOULDBLOCK) {
+                        std::cout << "EWOULDBLOCK" << std::endl;
+                        continue;
+                    } else {
+                        throw std::runtime_error("Error reading inside loop");
+                    }
+                }
+                else if (bytes == 0) {
+                    throw std::runtime_error("Error in the reading, bytes == 0");
+                }
+                std::cout << "Buffer is : " << buf << std::endl;
+                splitBuf(buf, connectionFds[i].fd, *this);
+            } catch (const std::exception &e) {
+                std::cerr << e.what() << std::endl;
             }
-            else if (bytes == 0) {
-                throw std::runtime_error("Error in the reading, bytes == 0");
-            }
-            std::cout << "Buffer is : " << buf << std::endl;
-            splitBuf(buf, connectionFds[i].fd, *this);
         }
     }
 }
+
 
 void Server::splitBuf(std::string buf, int fd, Server &server) {
     size_t start = 0;

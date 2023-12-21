@@ -38,16 +38,14 @@ int main(int argc, char **argv)
  *                                                                          Message when new user is joining the channel ? --> DONE
  *                                                                          operator status -> add @ to the nickname --> DONE
  * mode -> +o -o + parsing to be corrected
- * private messages from user to user (different argv ?)
- * who is ?
- * if nobody else in channel, channel is deleted
- *                                      command quit
- * Lag time after quit
+ *                                                                          private messages from user to user (different argv ?) --> DONE
+ *                                                                          if nobody else in channel, channel is deleted --> DONE
+ *                                                                          command quit --> DONE
+ *                                                                          Lag time after quit --> DONE
  * 
  * 
  * Change the parsing into a 2D array
  * signals
- * welcome message to be personalized
  * 
  * set the cout correctly / colors
  * change everything which is critical into exceptions
