@@ -830,7 +830,8 @@ void User::command_quit(Server &server, s_message &message) {
                 _operatorStatusMap.erase((*it));
                 _isInvitedToChannel.erase((*it));
                 if ((*it)->get_userSize() == 0) {
-                    std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(),server.get_channels().end(), _channel_rn);
+                    std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(),
+                                                                    server.get_channels().end(), _channel_rn);
                     if (it != server.get_channels().end()) {
                         channel_ptr = *it;
                     }
@@ -840,25 +841,27 @@ void User::command_quit(Server &server, s_message &message) {
         }
     }
     if (channel_ptr != nullptr) {
-        std::vector<Channel*>::iterator it = std::find(server.get_channels().begin(),server.get_channels().end(), channel_ptr);
+        std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(),
+                                                        channel_ptr);
         if (it != server.get_channels().end()) {
             server.get_channels().erase(it);
             delete channel_ptr;
         }
-    send(_fd, QUIT(_nick, _name, _hostName).c_str(), QUIT(_nick, _name, _hostName).size(), 0);
-    for (std::vector<User *>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
-        if ((*it)->get_nick() == _nick) {
-            for (std::vector <pollfd>::iterator it2 = server.get_pollfds()->begin(); it2 != server.get_pollfds()->end();it2++)
-            {
-                if ((*it2).fd == _fd) {
-                    server.get_pollfds()->erase(it2);
+        send(_fd, QUIT(_nick, _name, _hostName).c_str(), QUIT(_nick, _name, _hostName).size(), 0);
+        for (std::vector<User *>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
+            if ((*it)->get_nick() == _nick) {
+                for (std::vector<pollfd>::iterator it2 = server.get_pollfds()->begin();
+                     it2 != server.get_pollfds()->end(); it2++) {
+                    if ((*it2).fd == _fd) {
+                        server.get_pollfds()->erase(it2);
+                    }
                 }
+                close(_fd);
+                server.get_clients().erase(it);
+                server.decrease_num_clients(1);
+                delete this;
+                break;
             }
-            close(_fd);
-            server.get_clients().erase(it);
-            server.decrease_num_clients(1);
-            delete this;
-            break;
         }
     }
 }

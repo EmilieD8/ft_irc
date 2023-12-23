@@ -1,4 +1,11 @@
 #include "../inc/irc.hpp"
+#include <signal.h>
+
+void signal_handler(int sig) {
+    if (sig == SIGINT)
+        std::cout << "end of program" << std::endl;
+    exit(EXIT_SUCCESS);
+}
 
 int main(int argc, char **argv)
 {
@@ -6,6 +13,7 @@ int main(int argc, char **argv)
         std::cerr << "Usage: ./ircserv  <port> <password>" << std::endl;
         exit(EXIT_FAILURE);
     }
+    signal(SIGINT, signal_handler);
     try
     {
         int port = std::stoi(argv[1]);
@@ -42,6 +50,8 @@ int main(int argc, char **argv)
  *                                                                          if nobody else in channel, channel is deleted --> DONE
  *                                                                          command quit --> DONE
  *                                                                          Lag time after quit --> DONE
+ * SEGFAULT when quitting in a channel with two users
+ * (maybe because we print too much)
  * 
  * 
  * Change the parsing into a 2D array
