@@ -47,7 +47,7 @@
 
 # define RPL_YOUREOPER(nick) ("381 " + nick + " :You are now an IRC operator\r\n")
 
-# define KICK(nick, user, host, chan, kicked, reason) (":" + nick + "!" + user + "@" + host + " KICK " + chan + " " + kicked + " :" + reason + "\r\n")
+# define KICK(nick, user, host, chan, kicked, reason) (":" + nick + "!" + user + "@" + host + " KICK " + chan + " " + kicked + ": " + reason + "\r\n")
 
 # define INVITE(nick, user, host, nickinvite, channel)  (":" + nick + "!" + user + "@" + host + " INVITE " + nickinvite + " " + channel + "\r\n")
 

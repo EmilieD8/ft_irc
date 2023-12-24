@@ -42,7 +42,7 @@ int main(int argc, char **argv)
  * 
  *                                                                          Message when joining channel with list of users --> DONE
  *                                                                          Loop for password at connection --> DOES NOT WORK, IDEA DEPRECATED
- * "Cannot use this command in that context"
+ *                                                                          "Cannot use this command in that context" --> DONE
  *                                                                          Message when new user is joining the channel ? --> DONE
  *                                                                          operator status -> add @ to the nickname --> DONE
  * mode -> +o -o + parsing to be corrected
@@ -50,19 +50,24 @@ int main(int argc, char **argv)
  *                                                                          if nobody else in channel, channel is deleted --> DONE
  *                                                                          command quit --> DONE
  *                                                                          Lag time after quit --> DONE
- * SEGFAULT when quitting in a channel with two users
- * (maybe because we print too much)
  * 
  * 
- * Change the parsing into a 2D array
+ *                                                                          Change the parsing into a 2D array --> DONE
  * signals
- * 
+ *                                                                          atoi port --> DONE
+ * ERR_NICKNAMEINUSE
  * set the cout correctly / colors
- * change everything which is critical into exceptions
- * cleanup variables not used
- * Align the "this->_nick", "get_nick()" and "_nick"
+ *                                                                          cleanup variables not used --> DONE
+ *                                                                          Align the "this->_nick", "get_nick()" and "_nick" --> DONE
  * send proper error message (to be checked)
+ * 
+ * 
+ * CHECK WITH MAX:
+ * attributes correctly put in constructor and destructor
+ * which function to private or public
+ * change everything which is critical into exceptions
  * leaks, take care of the proper destructor
- * Private vs public attributes to be organized
+ * 
+ * 
  * */
 

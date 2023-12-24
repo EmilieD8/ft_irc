@@ -5,6 +5,7 @@ struct s_message {
     std::string _fullStr;
     std::string _prefix;
     std::string _command;
+    std::vector<std::string> _paramsSplit;
     std::string _params;
 };
 
@@ -21,8 +22,7 @@ class Channel;
 
 class User {
     public:
-        User();
-        User(int fd, int id);
+        User(int fd);
         ~User();
         User(User const & src);
         User & operator=(User const & src);
@@ -34,7 +34,6 @@ class User {
         std::string get_nick() const;
         std::string get_host() const;
         std::string get_name() const;
-        std::string get_pw() const;
         void set_nick(std::string nick);
         void set_name(std::string name);
         void setOperatorStatus(Channel &channel, bool isOperator);
@@ -61,16 +60,17 @@ class User {
         void interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel);
         void splitMessage(int fd, Server& server, std::string buf);
         void parseMessage(Server &server);
+        void send_to(std::string text) const;
     private:
 
+        User();
         int _fd;
-        int id;
         std::string _nick;
         std::string _name;
         std::string _realName;
         std::string _hostName;
-        std::string _serverName; // to be deleted ?
-        std::string _pw;
+        std::string _serverName;
+        std::string _color;
         bool _passwordChecked;
         s_message _message;
         Channel *_channel_rn;
