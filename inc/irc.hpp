@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/10/23 10:58:19 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/08 15:33:19 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/24 16:55:16 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,3 +38,15 @@
 #include "Channel.hpp"
 
 #define BUFFER_SIZE 512
+
+#define RED "\033[31m"
+#define BLUE "\033[34m"
+#define GREEN "\033[32m"
+#define YELLOW  "\033[33m"
+#define MAGENTA "\033[35m"
+#define CYAN    "\033[36m"
+#define BRIGHT_GREEN    "\033[92m"
+#define BRIGHT_YELLOW   "\033[93m"
+#define BRIGHT_BLUE     "\033[94m"
+#define BRIGHT_MAGENTA  "\033[95m"
+#define BRIGHT_CYAN     "\033[96m"

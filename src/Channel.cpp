@@ -1,13 +1,13 @@
 #include "../inc/Channel.hpp"
 
 Channel::Channel(std::string name): _name(name) {
+    _topic = "\0";
     _isInviteOnly = false;
     _topicRestricted = false;
     _keySet = false;
-    _limitSet = false;
     _password = "\0";
+    _limitSet = false;
     _limit = 0;
-    _topic = "\0";
 }
 
 Channel::~Channel() {
@@ -22,8 +22,13 @@ Channel &Channel::operator=(Channel const &src) {
     if (this != &src) {
         _name = src._name;
         _topic = src._topic;
+        _isInviteOnly = src._isInviteOnly;
+        _topicRestricted = src._topicRestricted;
+        _keySet = src._keySet;
+        _password = src._password;
+        _limitSet = src._limitSet;
+        _limit = src._limit;
         _users = src._users;
-        // change to private attributes ++
     }
     return *this;
 }
@@ -115,18 +120,18 @@ void Channel::set_keySet(bool key) {
 }
 
 void Channel::send_to_all_private(std::string msg, User *user, std::string sender) {
- // make sure that _users is not empty and is in channel
-    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-        if (((*it)->get_nick() != user->get_nick()) && (*it)->get_channel_atm()->get_name() == this->get_name())
-            send((*it)->get_fd(), PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg).c_str(),
-                 PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg).size(), 0 );
-
+    if (_users.size() > 0) {
+        for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
+            if (((*it)->get_nick() != user->get_nick()) && (*it)->get_channel_atm()->get_name() == _name)
+                (*it)->send_to(PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg));
+        }
     }
 }
 
 void Channel::send_to_all_macro(std::string macro) {
-    // make sure that _users is not empty
-    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-            send((*it)->get_fd(), macro.c_str(),macro.size(), 0 );
+    if (_users.size() > 0) {
+        for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
+                (*it)->send_to(macro);
+        }
     }
 }
