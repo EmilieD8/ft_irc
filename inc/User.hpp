@@ -16,6 +16,7 @@ struct s_flag
     bool isValid;
     s_flag *next;
     s_flag *prev;
+    std::string option;
 };
 
 class Channel;
@@ -56,7 +57,7 @@ class User {
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
         s_flag *parserOption(std::string flags);
-
+        bool checkParsing(s_flag *parsed, std::vector<std::string> options);
         void interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel);
         void splitMessage(int fd, Server& server, std::string buf);
         void parseMessage(Server &server);

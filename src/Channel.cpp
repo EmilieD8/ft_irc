@@ -129,6 +129,8 @@ void Channel::send_to_all_private(std::string msg, User *user, std::string sende
 }
 
 void Channel::send_to_all_macro(std::string macro) {
+    std::cout << "Sending to all macro" << std::endl;
+    std::cout << "Macro: " << macro << std::endl;
     if (_users.size() > 0) {
         for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
                 (*it)->send_to(macro);

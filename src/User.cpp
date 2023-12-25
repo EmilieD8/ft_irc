@@ -107,6 +107,8 @@ void User::set_name(std::string name) {
 
 void	User::send_to(std::string text) const {
 
+std::cout << "SEND TO : " << text << std::endl;
+std::cout << text << std::endl;
 	send(_fd, text.c_str(), text.length(), 0);
 	std::cout << GREEN << _fd - 3 << " > " << text;
 }
@@ -138,6 +140,7 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
         }
         count++;
     }
+    std::cout << "Buffer is " << buf << std::endl;
     parseMessage(server);
 }
 
@@ -408,13 +411,6 @@ void User::command_topic(Server &server, s_message &message) {
     }
 }
 
-//  format : 
-//  * /mode #channel +t => +t (topic): When set, only channel operators can change the channel topic. 
-//  * /mode #channel +i => Set/remove Invite-only channel
-//  * /mode #channel +k password => k: Set/remove the channel key (password)
-//  * /mode #channel +o nickname => o: Give/take channel operator privilege
-//  * /mode #channel +l limit => l: Set/remove the user limit to channel
-
 void User::command_mode(Server &server, s_message &message) {
     std::cout << _color << _fd - 3 << " < MODE " << _message._params << std::endl;
     std::stringstream ss(message._params);
@@ -474,8 +470,22 @@ void User::command_mode(Server &server, s_message &message) {
     s_flag *parsed;
     if (flags[0] == '+' || flags[0] == '-') {
         parsed = parserOption(flags);
-        interpretMode(parsed, optionsArray, (*_channel_rn));
-        s_flag *currentFlag = parsed;
+         s_flag *currentFlag = parsed;
+        while (currentFlag != nullptr){
+            std::cout << " PARSED : " << currentFlag->flag << " " << currentFlag->sign << " " << currentFlag->isValid << std::endl;
+            s_flag *nextFlag = currentFlag->next;
+            // delete currentFlag;
+            currentFlag = nextFlag; 
+        }
+        if (!checkParsing(parsed, optionsArray))
+        {
+            std::cout << "false" << std::endl;
+        }
+        else
+        {
+            interpretMode(parsed, optionsArray, (*_channel_rn));
+        }
+        currentFlag = parsed;
         while (currentFlag != nullptr){
             s_flag *nextFlag = currentFlag->next;
             delete currentFlag;
@@ -485,9 +495,43 @@ void User::command_mode(Server &server, s_message &message) {
     return;
 }
 
+bool User::checkParsing(s_flag *parsed, std::vector<std::string> options)
+{
+    int i = 0;
+    while (parsed != nullptr)
+    {
+        std::cout << parsed->flag << " " << parsed->sign << " " << parsed->isValid << std::endl;
+        if (parsed->flag == 'i' || parsed->flag == 't')
+        {
+            if (parsed->sign != 1 && parsed->sign != 2)
+                parsed->isValid = false;
+        }
+        else if ((parsed->flag == 'k' || parsed->flag == 'l') && (parsed->sign == 1 || parsed->sign == 2))
+        {
+            std::cout << "ENTERED" << std::endl;
+            if (parsed->sign == 1)
+            {
+                std::cout << "testing" << std::endl;
+                if (options.empty() || i >= options.size())
+                    {std::cout << "false in option " << std::endl; return (false);}
+                else
+                    parsed->option = options[i];
+                i++;
+            }
+        }
+        else
+            { std::cout<< "false at the end " << std::endl; return (false);}
+        parsed = parsed->next;
+    }
+    std::cout << "end" << std::endl;
+    return (true);
+}
 void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel)
 {
     int i = 0;
+    std::string toSendFlagsPos;
+    std::string toSendFlagsNeg;
+    std::string toSendOptions;
     while(parsed != nullptr)
     {
         if (parsed->flag == 't' && parsed->sign == 1)
@@ -495,7 +539,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (!channel.get_topicRestricted())
             {
                 channel.set_topicRestricted(true);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "+t"));
+                toSendFlagsPos += "t";
             }
         }
         else if (parsed->flag == 't' && parsed->sign == 2)
@@ -503,8 +547,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (channel.get_topicRestricted())
             {
                 channel.set_topicRestricted(false);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-t"));
-
+                toSendFlagsNeg += "t";
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 1)
@@ -512,7 +555,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (!channel.get_inviteOnly())
             {
                 channel.set_inviteOnly(true);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "+i"));
+                toSendFlagsPos += "i";
             }
         }
         else if (parsed->flag == 'i' && parsed->sign == 2)
@@ -520,7 +563,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (channel.get_inviteOnly())
             {
                 channel.set_inviteOnly(false);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-i"));
+                toSendFlagsNeg += "i";
             }
         }
         else if (parsed->flag == 'l' && parsed->sign == 1)
@@ -531,7 +574,8 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
                 channel.set_limitSet(true);
                 channel.set_limit(limit);
                 std::string flags = "+l " + std::to_string(limit);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
+                toSendFlagsPos += "l";
+                toSendOptions += std::to_string(limit) + " ";
             }
             catch(const std::exception& e)
             {
@@ -544,22 +588,17 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (channel.get_limitSet())
             {
                 channel.set_limitSet(false);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-l"));
+                toSendFlagsNeg += "l";
             }
         }
         else if (parsed->flag == 'k' && parsed->sign == 1)
         {
-            try
-            {
-                channel.set_keySet(true);
-                channel.set_password(options[i]);
-                std::string flags = "+k " + options[i];
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n'; // correct ?
-            }
+           
+            channel.set_keySet(true);
+            channel.set_password(options[i]);
+            std::string flags = "+k " + options[i];
+            toSendFlagsPos += "k";
+            toSendOptions += options[i] + " ";
             i++;
         }
         else if (parsed->flag == 'k' && parsed->sign == 2)
@@ -567,8 +606,9 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             if (channel.get_keySet())
             {
                 channel.set_keySet(false);
-                channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), "-k"));
+                toSendFlagsNeg += "k";
             }
+            i++;
         }
         else if (parsed->flag == 'o' && parsed->sign == 1)
         {
@@ -582,7 +622,8 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
                     (*it)->setOperatorStatus(*_channel_rn, true);
                     send_to(RPL_YOUREOPER(_nick));
                     changed_plus = true;
-                    channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
+                    toSendFlagsPos += "o";
+                    toSendOptions += options[i] + " ";
                     break;
                 }
             }
@@ -603,7 +644,8 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
                 {
                     (*it)->setOperatorStatus(*_channel_rn, false);
                     changed_minus = true;
-                    channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), flags));
+                    toSendFlagsNeg += "-o";
+                    toSendOptions += options[i] + " ";
                     break;
                 }
             }
@@ -615,15 +657,23 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
         }
         else
             send(_fd, ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).c_str(), ERR_UNKNOWNMODE(_serverName, _nick, parsed->flag).size(), 0);
-        //TODO : parsing not correct ?
         parsed = parsed->next;
     }
+    if (toSendFlagsPos.size() > 0)
+        toSendFlagsPos = "+" + toSendFlagsPos;
+    if (toSendFlagsNeg.size() > 0)
+        toSendFlagsNeg = "-" + toSendFlagsNeg;
+    if (toSendOptions.size() > 0)
+        toSendOptions = " " + toSendOptions;
+    std::string finalString = toSendFlagsPos + toSendFlagsNeg + toSendOptions;
+    channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), finalString));
     return;
 }
 
 s_flag *User::parserOption(std::string flags)
 {
     int i = 0;
+    int it = 0;
     s_flag* head = nullptr;
     s_flag *currentFlag = nullptr;
     int parsedSign = 0;
@@ -843,13 +893,23 @@ void User::command_quit(Server &server, s_message &message) {
 
 
 /*irc interpretation : 
-* /mode +t +l ==> send "+tl"
 * /mode +t +l 10 +o mimi ==> send #CHANNEL +tlo 10 mimi
 * /mode +t -l 10 +o mimi ==> send +t-l10+o mimi
 * /mode +t -l 58 +k hello ==> send +t-l58+k hello
 * /mode +t +l 58 +k hello ==> send +tlk 58 hello
 * /mode +t +l 58 -k hello ==> send +tl-k 58 hello 
 * /mode +t +l 58 -k hello +o ==> send +tl-k+o 58 hello
+
+
+* /mode +t +l ==> send "MODE #test +tl" ==> SEGFAULT   and should not do anything
+* /mode +t +l 10 ==> send "MODE #test +tl 10" - set +t and + l10
+-t -l with the limit, does not work 
+issue with receiving some of the modes
+/mode +k 10 +l pass => password set but not limit
+==> in mine -> set the password to 10 and exception is thrown out for stoi
+/mode +k pass +l 10 -> send MODE #test +kl pass 10
+if one element is missing, wrong
+save the messages in a message and send them all at once ? 
 */
 
 
