@@ -2,12 +2,41 @@
 #include <signal.h>
 
 bool g_isExit = false;
+Server* g_server = NULL;
+
+void clear_all(Server *server) {
+    std::cout << "enter here" << std::endl;
+    std::cout << "size of clients: " << server->get_clients().size() << std::endl;
+    for (std::vector<User*>::iterator it = server->get_clients().begin(); it != server->get_clients().end(); it++) {
+        std::cout << (*it)->get_nick() << std::endl;
+        delete *it;
+    }
+    server->get_clients().clear();
+    for (std::vector<Channel*>::iterator it = server->get_channels().begin(); it != server->get_channels().end(); it++) {
+        delete *it;
+    }
+    server->get_channels().clear();
+    for (std::vector<pollfd>::iterator it = server->get_pollfds()->begin(); it != server->get_pollfds()->end(); it++) {
+        close(it->fd);
+    }
+    server->get_pollfds()->clear();
+    delete server->get_pollfds();
+    //close(server.fd);
+    // delete server;
+    //exit(EXIT_SUCCESS);
+}
 
 void signal_handler(int sig) {
     if (sig == SIGINT)
     {
         std::cout << "end of program" << std::endl;
-        g_isExit = true;
+        if (g_server)
+        {
+            clear_all(g_server);
+           // delete g_server;
+
+        }
+        exit(EXIT_SUCCESS);
     }
 }
 
@@ -17,16 +46,15 @@ int main(int argc, char **argv)
         std::cerr << "Usage: ./ircserv  <port> <password>" << std::endl;
         exit(EXIT_FAILURE);
     }
+    int port = std::atoi(argv[1]);
+    std::string password = argv[2];
     //check if port is an int and check if password exists
     signal(SIGINT, signal_handler);
     try
     {
-        int port = std::atoi(argv[1]);
-        std::string password = argv[2];
         Server server(port, password);
-        while (!g_isExit)
-            server.launchServer();
-        std::cout << "reached" << std::endl;
+        g_server = &server;
+        server.launchServer();
     }
     catch(const std::exception& e)
     {

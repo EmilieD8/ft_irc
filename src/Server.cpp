@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/26 16:55:44 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/26 17:59:20 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,23 +22,8 @@ Server::Server(int port, std::string password) {
 }
 
 Server::~Server() {
-    std::cout << "Closing server" << std::endl;
-    clear_all();
 }
 
-void Server::clear_all() {
-       for (std::vector<User*>::iterator it = get_clients().begin(); it != get_clients().end(); it++) {
-        delete *it;
-    }
-    for (std::vector<Channel*>::iterator it = get_channels().begin(); it != get_channels().end(); it++) {
-        delete *it;
-    }
-    for (std::vector<pollfd>::iterator it = get_pollfds()->begin(); it != get_pollfds()->end(); it++) {
-        close(it->fd);
-    }
-    close(_server.fd);
-    delete this;
-}
 
 Server::Server(Server const & src) {
     *this = src;
@@ -212,16 +197,15 @@ void Server::launchServer() {
     connectionFds[0].fd = _server.fd;
     connectionFds[0].events = POLLIN;
     std::cout << "Launching..." << std::endl;
-    while (g_isExit == false) {
-        std::cout << "EXIT status is:" << g_isExit << std::endl;
-		try {
+    while (1)
+    {
+        try {
             socket_polling();
             connect();
             read_client();
         }
         catch (std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
-            exit(EXIT_FAILURE);
         }
     }
 }
