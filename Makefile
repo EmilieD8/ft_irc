@@ -16,8 +16,7 @@ OBJS =	$(SRC:.cpp=.o)
 
 CC = 	c++
 
-FLAGS =	
-#-Wall -Wextra -Werror -std=c++98
+FLAGS =	-g -Wall -Wextra -Werror -std=c++98
 
 NAME =	ircserv
 

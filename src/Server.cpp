@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/24 15:52:36 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/26 16:55:44 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,21 @@ Server::Server(int port, std::string password) {
 
 Server::~Server() {
     std::cout << "Closing server" << std::endl;
+    clear_all();
+}
+
+void Server::clear_all() {
+       for (std::vector<User*>::iterator it = get_clients().begin(); it != get_clients().end(); it++) {
+        delete *it;
+    }
+    for (std::vector<Channel*>::iterator it = get_channels().begin(); it != get_channels().end(); it++) {
+        delete *it;
+    }
+    for (std::vector<pollfd>::iterator it = get_pollfds()->begin(); it != get_pollfds()->end(); it++) {
+        close(it->fd);
+    }
     close(_server.fd);
+    delete this;
 }
 
 Server::Server(Server const & src) {
@@ -118,11 +132,9 @@ void Server::connect() {
     fcntl(new_connection, F_SETFL, O_NONBLOCK);
 
     if (_num_clients == maxClients)
-        throw std::runtime_error("Too many clients");
-
-	connectionFds[_num_clients + 1].fd = new_connection;
+        {throw std::runtime_error("Too many clients");}
+    connectionFds[_num_clients + 1].fd = new_connection;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
-
     User *new_user = new User(new_connection);
     _clients.push_back(new_user);
     _num_clients++;
@@ -188,7 +200,7 @@ void Server::splitBuf(std::string buf, int fd, Server &server) {
             std::string message(buf.substr(start, end - start));
             start = end + 2;
             end = buf.find("\r\n", start);
-            (*it)->splitMessage(fd, server, message);
+            (*it)->splitMessage(server, message);
             }
         break;
         }
@@ -200,7 +212,8 @@ void Server::launchServer() {
     connectionFds[0].fd = _server.fd;
     connectionFds[0].events = POLLIN;
     std::cout << "Launching..." << std::endl;
-    while (_isExit == false) {
+    while (g_isExit == false) {
+        std::cout << "EXIT status is:" << g_isExit << std::endl;
 		try {
             socket_polling();
             connect();

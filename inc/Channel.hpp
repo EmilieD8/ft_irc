@@ -6,6 +6,7 @@ class User;
 class Channel {
     public:
         Channel(std::string name);
+        Channel();
         ~Channel();
         Channel(Channel const & src);
         Channel & operator=(Channel const & src);

@@ -43,23 +43,23 @@ class User {
         bool get_InviteStatus(Channel *channel) const;
 
         void command_pass(Server &server);
-        void command_nick(Server &server, s_message &message);
-        void command_user(Server &server, s_message &message);
-        void command_topic(Server &server, s_message &message);
-        void command_ping(Server &server, s_message &message);
-        void command_join(Server &server, s_message &message);
-        void command_mode(Server &server, s_message &message);
-        void command_privmsg(Server &server, s_message &message);
-        void command_part(Server &server, s_message &message);
-        void command_kick(Server &server, s_message &message);
-        void command_invite(Server &server, s_message &message);
-        void command_quit(Server &server, s_message &message);
+        void command_nick(Server &server);
+        void command_user();
+        void command_topic(Server &server);
+        void command_ping();
+        void command_join(Server &server);
+        void command_mode(Server &server);
+        void command_privmsg(Server &server);
+        void command_part(Server &server);
+        void command_kick();
+        void command_invite(Server &server);
+        void command_quit(Server &server);
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
         s_flag *parserOption(std::string flags);
         bool checkParsing(s_flag *parsed, std::vector<std::string> options);
         void interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel);
-        void splitMessage(int fd, Server& server, std::string buf);
+        void splitMessage(Server& server, std::string buf);
         void parseMessage(Server &server);
         void send_to(std::string text) const;
     private:

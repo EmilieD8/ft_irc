@@ -17,6 +17,7 @@
 
 # define ERR_NONICKNAMEGIVEN(command) (command + ":No nickname given\r\n")
 
+# define ERR_NICKNAMEINUSE(nick) ("433 " + nick + " :Nickname already in use\r\n")
 # define ERR_NICKNAMEISUSE(nick) ("433 NICK :" + nick + "\r\n")
 
 # define ERR_NOTONCHANNEL(channel) ("442 " + channel + " :You're not on that channel\r\n")
@@ -68,3 +69,5 @@
 # define RPL_ENDOFNAMES(nick, user, host, channel) ("366 " + nick + "!" + user + "@" + host + " " + channel + " :End of NAMES list\r\n")
 
 # define ERR_NOSUCHCHANNEL(channel) ("403 " + channel + " :No such channel\r\n")
+
+//#define RPL_CHANNELMODEIS(nick, channel, modes) "324 " + nick + " "  + channel + " " + modes

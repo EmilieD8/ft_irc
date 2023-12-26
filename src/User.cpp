@@ -28,7 +28,7 @@ User::User(int fd) : _fd(fd)  {
 }
 
 User::~User() {
-   // delete this; ==> segfault
+    return;
 }
 
 User::User(User const &src) {
@@ -106,14 +106,11 @@ void User::set_name(std::string name) {
 }
 
 void	User::send_to(std::string text) const {
-
-std::cout << "SEND TO : " << text << std::endl;
-std::cout << text << std::endl;
 	send(_fd, text.c_str(), text.length(), 0);
 	std::cout << GREEN << _fd - 3 << " > " << text;
 }
 
-void User::splitMessage(int fd, Server &server, std::string buf) {
+void User::splitMessage(Server &server, std::string buf) {
     std::stringstream ss(buf);
     std::string word;
     int count;
@@ -140,7 +137,6 @@ void User::splitMessage(int fd, Server &server, std::string buf) {
         }
         count++;
     }
-    std::cout << "Buffer is " << buf << std::endl;
     parseMessage(server);
 }
 
@@ -148,7 +144,7 @@ void User::parseMessage(Server &server) {
     std::string type[] = {"PASS", "NICK", "USER", "JOIN", "KICK", "INVITE", "CAP", "PING", "MODE", "TOPIC", "PRIVMSG", "PART", "QUIT", "/INVALID"};
     int count = 0;
     size_t arraySize = sizeof(type) / sizeof(type[0]);
-    for (int i = 0; i < arraySize; i++){
+    for (int i = 0; i < (int)arraySize; i++){
         if (_message._command.compare(type[i]) != 0)
             count++;
         else
@@ -159,40 +155,40 @@ void User::parseMessage(Server &server) {
             command_pass(server);
             break;
         case 1:
-            command_nick(server, _message);
+            command_nick(server);
             break;
         case 2:
-            command_user(server, _message);
+            command_user();
             break;
         case 3:
-            command_join(server, _message);
+            command_join(server);
             break;
         case 4:
-            command_kick(server, _message);
+            command_kick();
             break;
         case 5:
-            command_invite(server, _message);
+            command_invite(server);
             break;
         case 6:
             //TODO CAP
             break;
         case 7:
-            command_ping(server, _message);
+            command_ping();
             break;
         case 8:
-            command_mode(server, _message);
+            command_mode(server);
             break;
         case 9:
-            command_topic(server, _message);
+            command_topic(server);
             break;
         case 10:
-            command_privmsg(server, _message);
+            command_privmsg(server);
             break;
         case 11:
-            command_part(server, _message);
+            command_part(server);
             break;
         case 12:
-            command_quit(server, _message);
+            command_quit(server);
             break;
         case 13:
             std::cout << "Error: invalid command" << std::endl;// check if correct. maybe to put the help ? 
@@ -209,30 +205,32 @@ void User::command_pass(Server &server) {
         _passwordChecked = true;
 }
 
-void User::command_nick(Server &server, s_message &message) {
+void User::command_nick(Server &server) {
     std::cout << _color << _fd - 3 << " < NICK " << _message._params << std::endl;
     if (_passwordChecked == false)
         return;
-    static int i = 0;
-    std::string new_nick = message._params;
-    if (_nick.empty() && (message._params.find(' ') != std::string::npos || message._params.size() > 9))
+    // static int i = 0;
+    std::string new_nick = _message._params;
+    if (_nick.empty() && (_message._params.find(' ') != std::string::npos || _message._params.size() > 9))
         new_nick = new_nick.substr(0, 9);
-    if (message._params.find(' ') != std::string::npos || message._params.size() > 9) {
+    if (_message._params.find(' ') != std::string::npos || _message._params.size() > 9) {
         send_to(ERR_ERRONEUSNICKNAME(new_nick));
         return ;
     }
     std::string old = get_nick();
     if (new_nick.empty()) {
-        send_to(ERR_NONICKNAMEGIVEN(message._command));
+        send_to(ERR_NONICKNAMEGIVEN(_message._command));
         return ;
     }
     std::vector <User *> clients = server.get_clients();
     for (std::vector<User *>::iterator it = clients.begin(); it != clients.end(); it++) {
         if ((*it)->get_nick().compare(new_nick) == 0) {
-            if (isdigit(new_nick[new_nick.size() - 1]))
-                new_nick = new_nick.substr(0, new_nick.size() - 1);
-            new_nick += std::to_string(i);
-            i++;
+            std::cout << "here" << std::endl;
+            send_to(ERR_NICKNAMEISUSE(new_nick));
+            // if (isdigit(new_nick[new_nick.size() - 1]))
+            //     new_nick = new_nick.substr(0, new_nick.size() - 1);
+            // new_nick += (i + 48);
+            // i++;
             break;
         }
     }
@@ -242,20 +240,20 @@ void User::command_nick(Server &server, s_message &message) {
     return ;
 }
 
-void User::command_user(Server &server, s_message &message) {
+void User::command_user() {
     std::cout << _color << _fd - 3 << " < USER " << _message._params << std::endl;
     if (!_passwordChecked || _nick.empty()) {
         delete this; // TODO : check for leaks
         return;
     }
     if (_message._paramsSplit.size() < 3 || _message._paramsSplit[3][0] != ':') {
-       send_to(ERR_NEEDMOREPARAMS(message._command));
+       send_to(ERR_NEEDMOREPARAMS(_message._command));
         return ;
     }
     _name = _message._paramsSplit[0];
     _hostName = _message._paramsSplit[1];
     _serverName = _message._paramsSplit[2];
-    for (int i = 4; i < _message._paramsSplit.size(); i++) {
+    for (int i = 4; i < (int)_message._paramsSplit.size(); i++) {
     _realName = _message._paramsSplit[3].substr(1);
         _realName += " " + _message._paramsSplit[i];
     }
@@ -266,7 +264,7 @@ void User::command_user(Server &server, s_message &message) {
     return ;
 }
 
-void User::command_ping(Server &server, s_message &message) {
+void User::command_ping() {
     std::cout << _color << _fd - 3 << " < PING " << _message._params << std::endl;
     if (_message._params.empty()) {
         send_to(ERR_NOORIGIN(_message._command));
@@ -276,17 +274,17 @@ void User::command_ping(Server &server, s_message &message) {
         send_to(PONG(_message._params));
 }
 
-void User::command_join(Server &server, s_message &message) {
+void User::command_join(Server &server) {
     std::cout << _color << _fd - 3 << " < JOIN " << _message._params << std::endl;
     int i = 0;
     std::string password;
-    std::string channelName = message._paramsSplit[0];
+    std::string channelName = _message._paramsSplit[0];
     if (channelName[0] != '#') {
         send_to(ERR_NOSUCHCHANNEL(channelName));
         return;
     }
-    if (message._paramsSplit.size() == 2)
-        password = message._paramsSplit[1];
+    if (_message._paramsSplit.size() == 2)
+        password = _message._paramsSplit[1];
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
         if ((*it)->get_name() == channelName) {
             if ((*it)->get_limitSet()) {
@@ -328,7 +326,7 @@ void User::command_join(Server &server, s_message &message) {
         else
             i++;
     }
-    if (i == server.get_channels().size()) {
+    if (i == (int)server.get_channels().size()) {
         Channel *channel = new Channel(channelName);
         channel->add_user(*this);
         set_channel_atm(*channel);
@@ -342,7 +340,7 @@ void User::command_join(Server &server, s_message &message) {
     }
 }
 
-void User::command_topic(Server &server, s_message &message) {
+void User::command_topic(Server &server) {
     std::cout << _color << _fd - 3 << " < TOPIC " << _message._params << std::endl;
     if (_isInAChannel)
     {
@@ -359,7 +357,7 @@ void User::command_topic(Server &server, s_message &message) {
             nameTopic = _message._paramsSplit[1].substr(1);
         else
             nameTopic = _message._paramsSplit[1];
-        for (int i = 2; i < _message._paramsSplit.size(); i++)
+        for (int i = 2; i < (int)_message._paramsSplit.size(); i++)
             nameTopic += " " + _message._paramsSplit[i];
         if (nameTopic.empty())
         {
@@ -411,15 +409,16 @@ void User::command_topic(Server &server, s_message &message) {
     }
 }
 
-void User::command_mode(Server &server, s_message &message) {
+void User::command_mode(Server &server) {
     std::cout << _color << _fd - 3 << " < MODE " << _message._params << std::endl;
-    std::stringstream ss(message._params);
+    std::stringstream ss(_message._params);
     std::string word;
     std::string channel;
     std::string flags = "\0";
     std::vector<std::string> optionsArray;
     int count = 0;
     Channel *channel_ptr;
+    // std::cout << "params" << _message._params << std::endl;
     while (ss >> word) {
         if (count == 0 && _isInAChannel == true && word != _channel_rn->get_name())
             flags = word;
@@ -432,6 +431,12 @@ void User::command_mode(Server &server, s_message &message) {
         count++;
     }
     bool skipped = false;
+    // std::string check = _nick + " +i";
+    // std::cout << check << std::endl;
+    // std::cout << flags << std::endl;
+    // std::cout << channel << std::endl;
+    // if (_message._params == check)
+    //     std::cout << "PRINT HERE " << std::endl;
     if (!_isInAChannel) {
         for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
             if ((*it)->get_name() == channel) {
@@ -456,13 +461,36 @@ void User::command_mode(Server &server, s_message &message) {
             }
         }
         if (!skipped) {
-            std::string test = _nick + " +i";
-            if (message._params == test)
+            std::string test = _name + " +i";
+            if (_message._params == test)
                 return;
             send_to(ERR_NOSUCHCHANNEL(channel));
             return;
         }
     }
+    if (flags.empty())
+    {
+        std::string modes = "+";
+        for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+            if ((*it)->get_name() == channel)
+            {
+                channel_ptr = (*it);
+                break;
+            }
+        }
+        if (channel_ptr->get_inviteOnly())
+            modes += "i";
+        if (channel_ptr->get_topicRestricted())
+            modes += "t";
+        if (channel_ptr->get_limitSet())
+            modes += "l";
+        if (channel_ptr->get_keySet())  
+            modes += "k";
+        if (modes == "+")
+            modes = "\0";
+        send_to(RPL_CHANNELMODEIS(_serverName, _nick, channel, modes));
+        return;
+    } 
     if (flags != "\0" && _isInAChannel && get_operatorStatus(_channel_rn) == false) {
         send_to(ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()));
         return;
@@ -470,23 +498,10 @@ void User::command_mode(Server &server, s_message &message) {
     s_flag *parsed;
     if (flags[0] == '+' || flags[0] == '-') {
         parsed = parserOption(flags);
-         s_flag *currentFlag = parsed;
-        while (currentFlag != nullptr){
-            std::cout << " PARSED : " << currentFlag->flag << " " << currentFlag->sign << " " << currentFlag->isValid << std::endl;
-            s_flag *nextFlag = currentFlag->next;
-            // delete currentFlag;
-            currentFlag = nextFlag; 
-        }
-        if (!checkParsing(parsed, optionsArray))
-        {
-            std::cout << "false" << std::endl;
-        }
-        else
-        {
+        if (checkParsing(parsed, optionsArray))
             interpretMode(parsed, optionsArray, (*_channel_rn));
-        }
-        currentFlag = parsed;
-        while (currentFlag != nullptr){
+        s_flag *currentFlag = parsed;
+        while (currentFlag != NULL){
             s_flag *nextFlag = currentFlag->next;
             delete currentFlag;
             currentFlag = nextFlag; 
@@ -498,9 +513,8 @@ void User::command_mode(Server &server, s_message &message) {
 bool User::checkParsing(s_flag *parsed, std::vector<std::string> options)
 {
     int i = 0;
-    while (parsed != nullptr)
+    while (parsed != NULL)
     {
-        std::cout << parsed->flag << " " << parsed->sign << " " << parsed->isValid << std::endl;
         if (parsed->flag == 'i' || parsed->flag == 't')
         {
             if (parsed->sign != 1 && parsed->sign != 2)
@@ -508,22 +522,19 @@ bool User::checkParsing(s_flag *parsed, std::vector<std::string> options)
         }
         else if ((parsed->flag == 'k' || parsed->flag == 'l') && (parsed->sign == 1 || parsed->sign == 2))
         {
-            std::cout << "ENTERED" << std::endl;
             if (parsed->sign == 1)
             {
-                std::cout << "testing" << std::endl;
-                if (options.empty() || i >= options.size())
-                    {std::cout << "false in option " << std::endl; return (false);}
+                if (options.empty() || i >= (int)options.size())
+                    return (false);
                 else
                     parsed->option = options[i];
                 i++;
             }
         }
         else
-            { std::cout<< "false at the end " << std::endl; return (false);}
+            return (false);
         parsed = parsed->next;
     }
-    std::cout << "end" << std::endl;
     return (true);
 }
 void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel)
@@ -532,7 +543,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
     std::string toSendFlagsPos;
     std::string toSendFlagsNeg;
     std::string toSendOptions;
-    while(parsed != nullptr)
+    while(parsed != NULL)
     {
         if (parsed->flag == 't' && parsed->sign == 1)
         {
@@ -570,12 +581,15 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
         {
             try
             {
-                int limit = std::stoi(options[i]);
+                char *endptr;
+                int limit = (int)std::strtol(options[i].c_str(),  &endptr, 10);
+                if (limit < 0 || *endptr != '\0')
+                    throw std::exception();
                 channel.set_limitSet(true);
                 channel.set_limit(limit);
-                std::string flags = "+l " + std::to_string(limit);
+                std::string flags = "+l " + options[i];
                 toSendFlagsPos += "l";
-                toSendOptions += std::to_string(limit) + " ";
+                toSendOptions += options[i];
             }
             catch(const std::exception& e)
             {
@@ -629,7 +643,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
             }
             if (!changed_plus) {
                 send_to(ERR_USERNOTINCHANNEL(nickname, channel.get_name()));
-                continue; // ?
+                continue;
             }
             i++;
         }
@@ -666,16 +680,16 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
     if (toSendOptions.size() > 0)
         toSendOptions = " " + toSendOptions;
     std::string finalString = toSendFlagsPos + toSendFlagsNeg + toSendOptions;
-    channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), finalString));
+    if (finalString.size() > 0)
+        channel.send_to_all_macro(RPL_CHANNELMODEIS(_serverName, _nick, channel.get_name(), finalString));
     return;
 }
 
 s_flag *User::parserOption(std::string flags)
 {
     int i = 0;
-    int it = 0;
-    s_flag* head = nullptr;
-    s_flag *currentFlag = nullptr;
+    s_flag* head = NULL;
+    s_flag *currentFlag = NULL;
     int parsedSign = 0;
     while (flags[i] != '\0')
     {
@@ -686,12 +700,12 @@ s_flag *User::parserOption(std::string flags)
         else
         {
             s_flag *newFlag = new s_flag;
-            if (head == nullptr)
+            if (head == NULL)
             {
                 head = newFlag;
-                head->prev = nullptr;
+                head->prev = NULL;
                 currentFlag = newFlag;
-                currentFlag->prev = nullptr;
+                currentFlag->prev = NULL;
             }
             else
             {
@@ -702,7 +716,7 @@ s_flag *User::parserOption(std::string flags)
             newFlag->flag = flags[i];
             if (parsedSign != 0)
                 updateStruct(newFlag, parsedSign, true);
-            else if (currentFlag != nullptr && currentFlag->prev != nullptr)
+            else if (currentFlag != NULL && currentFlag->prev != NULL)
                 updateStruct(newFlag, currentFlag->prev->sign, true);
             else
                 updateStruct(newFlag, 0, false);
@@ -717,17 +731,17 @@ s_flag *User::updateStruct(s_flag *newFlag, int sign, bool isValid)
 {
     newFlag->sign = sign;
     newFlag->isValid = isValid;
-    newFlag->next = nullptr;
+    newFlag->next = NULL;
     return (newFlag);
 }
 
-void User::command_privmsg(Server &server, s_message &message) {
+void User::command_privmsg(Server &server) {
     std::cout << _color << _fd - 3 << " < MSG " << _message._params << std::endl;
     std::string user = "\0";
     std::string msg;
     if (!_isInAChannel || (_isInAChannel && _message._paramsSplit[0] != _channel_rn->get_name()))
         user = _message._paramsSplit[0];
-    for (int i = 1; i < _message._paramsSplit.size(); i++)
+    for (int i = 1; i < (int)_message._paramsSplit.size(); i++)
         msg += _message._paramsSplit[i] + " ";
     msg = msg.substr(1, msg.size() - 2); // this takes out the ":" in front of the message and at the end the space
     if (user == "\0")
@@ -740,15 +754,15 @@ void User::command_privmsg(Server &server, s_message &message) {
     }
 }
 
-void User::command_part(Server &server, s_message &message) {
+void User::command_part(Server &server) {
     std::cout << _color << _fd - 3 << " < PART " << _message._params << std::endl;
     std::string msg;
-    for (int i = 1; i < _message._paramsSplit.size(); i++)
+    for (int i = 1; i < (int)_message._paramsSplit.size(); i++)
         msg += _message._paramsSplit[i] + " ";
     if (!msg.empty())
         msg = msg.substr(1, msg.size() - 2);
     if (!_channel_rn) {
-        send_to(ERR_NEEDMOREPARAMS(message._command));
+        send_to(ERR_NEEDMOREPARAMS(_message._command));
         return;
     }
     if (msg.empty())
@@ -766,7 +780,7 @@ void User::command_part(Server &server, s_message &message) {
         delete _channel_rn;
     }
     if (_operatorStatusMap.empty()){
-        _channel_rn = nullptr;
+        _channel_rn = NULL;
         _isInAChannel = false;
     }
     else {
@@ -776,7 +790,7 @@ void User::command_part(Server &server, s_message &message) {
     }
 }
 
-void User::command_kick(Server &server, s_message &message) {
+void User::command_kick() {
     std::cout << _color << _fd - 3 << " < KICK " << _message._params << std::endl;
     if (!get_operatorStatus(_channel_rn)) {
         send_to(ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()));
@@ -785,7 +799,7 @@ void User::command_kick(Server &server, s_message &message) {
     else {
         std::string reason;
         std::string userToBeKicked = _message._paramsSplit[1];
-        for (int i = 2; i < _message._paramsSplit.size(); i++)
+        for (int i = 2; i < (int)_message._paramsSplit.size(); i++)
             reason += _message._paramsSplit[i] + " ";
         if (reason.empty())
             reason = reason.substr(1, reason.size() - 2);
@@ -802,11 +816,11 @@ void User::command_kick(Server &server, s_message &message) {
                 send_to(ERR_USERNOTINCHANNEL(userToBeKicked, _channel_rn->get_name()));
         }
         else
-            send_to(ERR_NEEDMOREPARAMS(message._command));
+            send_to(ERR_NEEDMOREPARAMS(_message._command));
     }
 }
 
-void User::command_invite(Server &server, s_message &message) {
+void User::command_invite(Server &server) {
     std::cout << _color << _fd - 3 << " < INVITE " << _message._params << std::endl;
     if (!_isInAChannel) {
         send_to(ERR_NOTONCHANNEL(_channel_rn->get_name()));
@@ -838,19 +852,19 @@ void User::command_invite(Server &server, s_message &message) {
             send_to(ERR_NOSUCHNICK(userToBeInvited));
     }
     else
-        send_to(ERR_NEEDMOREPARAMS(message._command));
+        send_to(ERR_NEEDMOREPARAMS(_message._command));
 }
 
-void User::command_quit(Server &server, s_message &message) {
+void User::command_quit(Server &server) {
     std::cout << _color << _fd - 3 << " < QUIT " << _message._params << std::endl;
-    Channel *channel_ptr;
+    Channel *channel_ptr = NULL;
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); ++it) {
         for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
             if ((*it2)->get_nick() == _nick) {
-                if (message._params.empty())
+                if (_message._params.empty())
                     (*it)->send_to_all_macro(PART(_nick, _name, _hostName, (*it)->get_name()));
                 else
-                    (*it)->send_to_all_macro(PART_REASON(_nick, _name, _hostName, (*it)->get_name(), message._params));
+                    (*it)->send_to_all_macro(PART_REASON(_nick, _name, _hostName, (*it)->get_name(), _message._params));
                 (*it)->remove_user(*this);
                 _operatorStatusMap.erase((*it));
                 _isInvitedToChannel.erase((*it));
@@ -865,7 +879,7 @@ void User::command_quit(Server &server, s_message &message) {
             }
         }
     }
-    if (channel_ptr != nullptr) {
+    if (channel_ptr != NULL) {
         std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(),
                                                         channel_ptr);
         if (it != server.get_channels().end()) {
