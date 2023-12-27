@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/27 10:08:16 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/27 14:36:54 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
 Server::Server(int port, std::string password) {
     _port = port;
     _num_clients = 0;
-	_isExit = false;
     _name = "Lit Server";
     _password = password;
     init();
@@ -29,15 +28,10 @@ Server::Server(Server const & src) {
     *this = src;
 }
 
-void Server::set_exit_status(bool status) {
-    _isExit = status;
-}
-
 Server & Server::operator=(Server const & src) {
     if (this != &src) {
         _port = src._port;
         _num_clients = src._num_clients;
-        _isExit = src._isExit;
         _channels = src._channels;
         _clients = src._clients;
         _server = src._server;
@@ -69,7 +63,7 @@ void Server::decrease_num_clients(int i) {
 }
 
 void Server::init() {
-    std::cout << "Initializing..." << std::endl;
+    std::cout << RED << "Initializing..." << std::endl;
     _server.fd = socket(AF_INET, SOCK_STREAM, 0);
     if (_server.fd < 0)
         throw std::runtime_error("Error establishing the socket...");
@@ -81,16 +75,16 @@ void Server::init() {
     _server.addr.sin_port = htons(_port);
     _server.addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    std::cout << "Binding..." << std::endl;
+    std::cout << RED <<"Binding..." << std::endl;
     if (bind(_server.fd, (struct sockaddr *) &_server.addr, sizeof(_server.addr)) < 0)
         throw std::runtime_error("Error binding");
 
-    std::cout << "Listening..." << std::endl;
+    std::cout << RED <<"Listening..." << std::endl;
     if (listen(_server.fd, SOMAXCONN) < 0)
         throw std::runtime_error("Error listening");
 
     _pollfds = new std::vector<pollfd>(maxClients + 1);
-    std::cout << "Initialized" << std::endl;
+    std::cout << RED << "Initialized" << std::endl;
 }
 
 void Server::socket_polling() {
@@ -135,6 +129,20 @@ void Server::read_client() {
             while (fullBuffer.find("\r\n") == std::string::npos)
             {
                 bytes = read(connectionFds[i].fd, buf, BUFFER_SIZE);
+                if (bytes == 0)
+                {
+                    for (std::vector<User *>::iterator it = _clients.begin(); it != _clients.end(); it++) {
+                        if (connectionFds[i].fd == (*it)->get_fd())
+                        {
+                            std::cout << "quit" << std::endl;(*it)->command_quit(*this);
+                            break;
+                        }
+                    }
+                    std::cout << "reached" << std::endl;
+                    bzero(buf, BUFFER_SIZE + 1);
+                    fullBuffer.clear();
+                    break;
+                }
                 buf[bytes] = 0;
                 fullBuffer.append(buf);
                 bzero(buf, BUFFER_SIZE + 1);
@@ -143,7 +151,6 @@ void Server::read_client() {
         }
     }
 }
-
 
 void Server::splitBuf(std::string buf, int fd, Server &server) {
     size_t start = 0;
@@ -170,7 +177,7 @@ void Server::launchServer() {
     std::vector<pollfd> &connectionFds = *_pollfds;
     connectionFds[0].fd = _server.fd;
     connectionFds[0].events = POLLIN;
-    std::cout << "Launching..." << std::endl;
+    std::cout << RED << "Launching..." << std::endl;
     while (1)
     {
         try {

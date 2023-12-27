@@ -23,10 +23,6 @@ class Channel;
 
 class User {
     public:
-        User(int fd);
-        ~User();
-        User(User const & src);
-        User & operator=(User const & src);
 
         void set_channel_atm(Channel& channel);
         Channel *get_channel_atm() const;
@@ -42,6 +38,17 @@ class User {
         void setInviteStatus(Channel &channel, bool isOperator);
         bool get_InviteStatus(Channel *channel) const;
 
+        ~User();
+        User(int fd);
+        void splitMessage(Server& server, std::string buf);
+        void parseMessage(Server &server);
+        void send_to(std::string text) const;
+        void command_quit(Server &server);
+    private:
+        User();
+        User(User const & src);
+        User & operator=(User const & src);
+
         void command_pass(Server &server);
         void command_nick(Server &server);
         void command_user();
@@ -53,18 +60,12 @@ class User {
         void command_part(Server &server);
         void command_kick();
         void command_invite(Server &server);
-        void command_quit(Server &server);
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);
-        s_flag *parserOption(std::string flags);
         bool checkParsing(s_flag *parsed, std::vector<std::string> options);
         void interpretMode(s_flag *parsed, std::vector<std::string> options, Channel &channel);
-        void splitMessage(Server& server, std::string buf);
-        void parseMessage(Server &server);
-        void send_to(std::string text) const;
-    private:
+        s_flag *parserOption(std::string flags);
 
-        User();
         int _fd;
         std::string _nick;
         std::string _name;
@@ -76,6 +77,6 @@ class User {
         s_message _message;
         Channel *_channel_rn;
         bool _isInAChannel;
-        std::map<Channel*, bool> _operatorStatusMap; // TODO : remove in part
-        std::map<Channel *, bool> _isInvitedToChannel;
+        std::map<Channel*, bool> _operatorStatusMap;
+        std::map<Channel*, bool> _isInvitedToChannel;
 };

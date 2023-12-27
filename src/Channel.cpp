@@ -23,7 +23,6 @@ Channel::Channel()
 }
 
 Channel::~Channel() {
-   // delete this; 
 }
 
 Channel::Channel(Channel const &src) {

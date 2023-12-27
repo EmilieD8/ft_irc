@@ -88,6 +88,8 @@ void User::setInviteStatus(Channel &channel, bool isInvited) {
 
 bool User::get_InviteStatus(Channel* channel) const {
     std::map<Channel*, bool>::const_iterator it = _isInvitedToChannel.find(channel);
+    if (it == _isInvitedToChannel.end())
+        return false;
     if (it->second == true)
         return true;
     else
@@ -248,10 +250,6 @@ void User::command_nick(Server &server) {
 
 void User::command_user() {
     std::cout << _color << _fd - 3 << " < USER " << _message._params << std::endl;
-    if (!_passwordChecked) {
-        delete this; // TODO : check for leaks
-        return;
-    }
     if (_message._paramsSplit.size() < 3 || _message._paramsSplit[3][0] != ':') {
        send_to(ERR_NEEDMOREPARAMS(_message._command));
         return ;
@@ -301,7 +299,7 @@ void User::command_join(Server &server) {
                 }
             }
             if ((*it)->get_inviteOnly()) {
-                if (this->get_InviteStatus(*it) == false) {
+                if (get_InviteStatus(*it) == false) {
                     send_to(ERR_INVITEONLYCHAN(_nick, channelName));
                     return;
                 }
@@ -386,10 +384,8 @@ void User::command_topic(Server &server) {
             return;
         }
         bool skipped = false;
-        Channel *channel_ptr;
         for (std::vector <Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
             if ((*it)->get_name() == _message._paramsSplit[0]) {
-                channel_ptr = (*it);
                 for (std::vector <User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
                     if ((*it2)->get_nick() == _nick) {
                         if (!get_operatorStatus((*it))) {
@@ -520,7 +516,7 @@ bool User::checkParsing(s_flag *parsed, std::vector<std::string> options)
             if (parsed->sign != 1 && parsed->sign != 2)
                 parsed->isValid = false;
         }
-        else if ((parsed->flag == 'k' || parsed->flag == 'l') && (parsed->sign == 1 || parsed->sign == 2))
+        else if ((parsed->flag == 'k' || parsed->flag == 'l' || parsed->flag == 'o') && (parsed->sign == 1 || parsed->sign == 2))
         {
             if (parsed->sign == 1)
             {
@@ -658,7 +654,7 @@ void User::interpretMode(s_flag *parsed, std::vector<std::string> options, Chann
                 {
                     (*it)->setOperatorStatus(*_channel_rn, false);
                     changed_minus = true;
-                    toSendFlagsNeg += "-o";
+                    toSendFlagsNeg += "o";
                     toSendOptions += options[i] + " ";
                     break;
                 }
@@ -739,11 +735,12 @@ void User::command_privmsg(Server &server) {
     std::cout << _color << _fd - 3 << " < MSG " << _message._params << std::endl;
     std::string user = "\0";
     std::string msg;
+    std::cout << "is in a channel : " << _isInAChannel << std::endl;
     if (!_isInAChannel || (_isInAChannel && _message._paramsSplit[0] != _channel_rn->get_name()))
         user = _message._paramsSplit[0];
     for (int i = 1; i < (int)_message._paramsSplit.size(); i++)
         msg += _message._paramsSplit[i] + " ";
-    if (user != _channel_rn->get_name())
+    if (msg[0] == ':')
         msg = msg.substr(1, msg.size() - 2);
     if (user == "\0")
         _channel_rn->send_to_all_private(msg, this, _nick);
@@ -802,7 +799,7 @@ void User::command_kick() {
         std::string userToBeKicked = _message._paramsSplit[1];
         for (int i = 2; i < (int)_message._paramsSplit.size(); i++)
             reason += _message._paramsSplit[i] + " ";
-        if (reason.empty())
+        if (!reason.empty())
             reason = reason.substr(1, reason.size() - 2);
         bool found = false;
         if (!userToBeKicked.empty()) {
@@ -810,6 +807,21 @@ void User::command_kick() {
                 if ((*it)->get_nick() == userToBeKicked) {
                     _channel_rn->send_to_all_macro(KICK(_nick, _name, _hostName, _channel_rn->get_name(), userToBeKicked, reason), true, this);
                     found = true;
+                    _channel_rn->remove_user(**it);
+                    (*it)->_operatorStatusMap.erase(_channel_rn);
+                    (*it)->_isInvitedToChannel.erase(_channel_rn);
+                    (*it)->_channel_rn = NULL;
+                    (*it)->_isInAChannel = false;
+                    std::cout << "is in a channel in kick: " << _isInAChannel << std::endl;
+                    // if (_operatorStatusMap.empty()){
+                    //         _channel_rn = NULL;
+                    //         _isInAChannel = false;
+                    // }
+                    // else {
+                    //     for (std::map<Channel *, bool>::iterator it = _operatorStatusMap.begin(); it != _operatorStatusMap.end(); ++it)
+                    //         _channel_rn = it->first;
+                    //     _isInAChannel = true;
+                    // }
                     break;
                 }
             }
@@ -859,14 +871,15 @@ void User::command_invite(Server &server) {
 void User::command_quit(Server &server) {
     std::cout << _color << _fd - 3 << " < QUIT " << _message._params << std::endl;
     Channel *channel_ptr = NULL;
+    User *User_ptr = NULL;
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); ++it) {
-        for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
+        for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); ++it2) {
             if ((*it2)->get_nick() == _nick) {
                 if (_message._params.empty())
-                    (*it)->send_to_all_macro(PART(_nick, _name, _hostName, (*it)->get_name()), true, this);
+                    (*it)->send_to_all_macro(PART(_nick, _name, _hostName, (*it)->get_name()), false, this);
                 else
-                    (*it)->send_to_all_macro(PART_REASON(_nick, _name, _hostName, (*it)->get_name(), _message._params), true, this);
-                (*it)->remove_user(*this);
+                    (*it)->send_to_all_macro(PART_REASON(_nick, _name, _hostName, (*it)->get_name(), _message._params), false, this);
+                User_ptr = (*it2);
                 _operatorStatusMap.erase((*it));
                 _isInvitedToChannel.erase((*it));
                 if ((*it)->get_userSize() == 0) {
@@ -879,6 +892,7 @@ void User::command_quit(Server &server) {
                 }
             }
         }
+        (*it)->remove_user(*User_ptr);
     }
     if (channel_ptr != NULL) {
         std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(),
@@ -887,21 +901,20 @@ void User::command_quit(Server &server) {
             server.get_channels().erase(it);
             delete channel_ptr;
         }
-        send_to(QUIT(_nick, _name, _hostName));
-        for (std::vector<User *>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
-            if ((*it)->get_nick() == _nick) {
-                for (std::vector<pollfd>::iterator it2 = server.get_pollfds()->begin();
-                     it2 != server.get_pollfds()->end(); it2++) {
-                    if ((*it2).fd == _fd) {
-                        server.get_pollfds()->erase(it2);
-                    }
+    }
+    for (std::vector<User *>::iterator it = server.get_clients().begin(); it != server.get_clients().end(); it++) {
+        if ((*it)->get_nick() == _nick) {
+            for (std::vector<pollfd>::iterator it2 = server.get_pollfds()->begin();
+                    it2 != server.get_pollfds()->end(); it2++) {
+                if ((*it2).fd == _fd) {
+                    server.get_pollfds()->erase(it2);
                 }
-                close(_fd);
-                server.get_clients().erase(it);
-                server.decrease_num_clients(1);
-                delete this;
-                break;
             }
+            close(_fd);
+            server.get_clients().erase(it);
+            server.decrease_num_clients(1);
+            delete this;
+            break;
         }
     }
 }

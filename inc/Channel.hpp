@@ -5,17 +5,6 @@ class User;
 
 class Channel {
     public:
-        Channel(std::string name);
-        Channel();
-        ~Channel();
-        Channel(Channel const & src);
-        Channel & operator=(Channel const & src);
-
-        void add_user(User &user);
-        void remove_user(User &user);
-
-        void send_to_all_private(std::string msg, User *user, std::string sender);
-        void send_to_all_macro(std::string macro, bool sendToSender, User *user);
 
 
         std::string get_topic() const;
@@ -45,7 +34,19 @@ class Channel {
         std::vector<User*> &get_users();
         int get_userSize() const;
 
+        ~Channel();
+        Channel(std::string name);
+        void send_to_all_private(std::string msg, User *user, std::string sender);
+        void send_to_all_macro(std::string macro, bool sendToSender, User *user);
+        void add_user(User &user);
+        void remove_user(User &user);
     private:
+        Channel();
+        Channel(Channel const & src);
+        Channel & operator=(Channel const & src);
+
+
+
         std::string _name;
         std::string _topic;
         std::vector<User*> _users;

@@ -1,8 +1,6 @@
 #pragma once
 #include "irc.hpp"
 
-extern bool g_isExit;
-
 struct s_socket {
     int fd;
     struct sockaddr_in addr;
@@ -13,24 +11,23 @@ class Channel;
 
 class Server {
     public:
-        Server(int port, std::string password);
-        ~Server();
-        Server(Server const & src);
-        Server & operator=(Server const & src);
 
         std::vector<User*> &get_clients();
         std::vector<pollfd> * &get_pollfds();
         std::vector<Channel *> &get_channels();
         std::string get_password() const;
 
-        void decrease_num_clients(int i);
+        ~Server();
         void launchServer();
-        void set_exit_status(bool status);
+        Server(int port, std::string password);
 
+        void decrease_num_clients(int i);
     private:
+        Server(Server const & src);
+        Server & operator=(Server const & src);
+
         int _port;
         int _num_clients;
-        bool _isExit;
 
         std::vector<Channel *> _channels;
         std::vector<User *> _clients;
