@@ -799,20 +799,21 @@ void User::command_kick() {
         std::string userToBeKicked = _message._paramsSplit[1];
         for (int i = 2; i < (int)_message._paramsSplit.size(); i++)
             reason += _message._paramsSplit[i] + " ";
-        if (!reason.empty())
+        if (reason.empty())
             reason = reason.substr(1, reason.size() - 2);
+        else
+            reason = "You have been kicked by an operator.";
         bool found = false;
         if (!userToBeKicked.empty()) {
             for (std::vector<User *>::iterator it = _channel_rn->get_users().begin(); it != _channel_rn->get_users().end(); it++) {
                 if ((*it)->get_nick() == userToBeKicked) {
-                    _channel_rn->send_to_all_macro(KICK(_nick, _name, _hostName, _channel_rn->get_name(), userToBeKicked, reason), true, this);
+                    _channel_rn->send_to_all_macro(KICK(_nick, _name, "localhost", _channel_rn->get_name(), userToBeKicked, reason), true, this);
                     found = true;
                     _channel_rn->remove_user(**it);
                     (*it)->_operatorStatusMap.erase(_channel_rn);
                     (*it)->_isInvitedToChannel.erase(_channel_rn);
                     (*it)->_channel_rn = NULL;
                     (*it)->_isInAChannel = false;
-                    std::cout << "is in a channel in kick: " << _isInAChannel << std::endl;
                     // if (_operatorStatusMap.empty()){
                     //         _channel_rn = NULL;
                     //         _isInAChannel = false;
