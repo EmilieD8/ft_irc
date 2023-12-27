@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/26 17:59:20 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/27 10:08:16 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,11 +113,9 @@ void Server::connect() {
     new_connection = accept(_server.fd, (struct sockaddr *) &_client.addr, &size);
     if (new_connection == -1)
         throw std::runtime_error("Accepting failed");
-
     fcntl(new_connection, F_SETFL, O_NONBLOCK);
-
     if (_num_clients == maxClients)
-        {throw std::runtime_error("Too many clients");}
+        throw std::runtime_error("Too many clients");
     connectionFds[_num_clients + 1].fd = new_connection;
     connectionFds[_num_clients + 1].events = POLLIN | POLLOUT;
     User *new_user = new User(new_connection);
@@ -142,30 +140,6 @@ void Server::read_client() {
                 bzero(buf, BUFFER_SIZE + 1);
             }
             splitBuf(fullBuffer, connectionFds[i].fd, *this);
-//            try {
-//                while ((bytes = recv(connectionFds[i].fd, buf, 10, 0)) == 10) {
-//                    // bytes = recv(connectionFds[i].fd, buf, sizeof(buf), 0);
-//                    //buf[bytes] = 0;
-//                    fullBuffer.append(buf, 10);
-//                    memset(buf, 0, sizeof(buf));
-//                    std::cout << "fullbuffer now: " << fullBuffer << std::endl;
-//                }
-//                if (bytes == -1) {
-//                    if (errno == EWOULDBLOCK)
-//                        std::cout << "EWOULDBLOCK" << std::endl;
-//                    else
-//                        throw std::runtime_error("Error reading inside loop");
-//                }
-//                else if (bytes > 0 && bytes < 10)
-//                {
-//                    buf[bytes] = 0;
-//                    fullBuffer.append(buf);
-//                    std::cout << "fullbuffer end: " << fullBuffer << std::endl;
-//                }
-//                splitBuf(fullBuffer, connectionFds[i].fd, *this);
-//            } catch (const std::exception &e) {
-//                std::cerr << e.what() << std::endl;
-//            }
         }
     }
 }

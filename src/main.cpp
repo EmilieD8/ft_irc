@@ -5,25 +5,19 @@ bool g_isExit = false;
 Server* g_server = NULL;
 
 void clear_all(Server *server) {
-    std::cout << "enter here" << std::endl;
-    std::cout << "size of clients: " << server->get_clients().size() << std::endl;
-    for (std::vector<User*>::iterator it = server->get_clients().begin(); it != server->get_clients().end(); it++) {
-        std::cout << (*it)->get_nick() << std::endl;
-        delete *it;
-    }
-    server->get_clients().clear();
     for (std::vector<Channel*>::iterator it = server->get_channels().begin(); it != server->get_channels().end(); it++) {
         delete *it;
     }
     server->get_channels().clear();
+    for (std::vector<User*>::iterator it = server->get_clients().begin(); it != server->get_clients().end(); it++) {
+        delete *it;
+    }
+    server->get_clients().clear();
     for (std::vector<pollfd>::iterator it = server->get_pollfds()->begin(); it != server->get_pollfds()->end(); it++) {
         close(it->fd);
     }
     server->get_pollfds()->clear();
     delete server->get_pollfds();
-    //close(server.fd);
-    // delete server;
-    //exit(EXIT_SUCCESS);
 }
 
 void signal_handler(int sig) {
@@ -33,8 +27,7 @@ void signal_handler(int sig) {
         if (g_server)
         {
             clear_all(g_server);
-           // delete g_server;
-
+            delete g_server;
         }
         exit(EXIT_SUCCESS);
     }
@@ -46,15 +39,19 @@ int main(int argc, char **argv)
         std::cerr << "Usage: ./ircserv  <port> <password>" << std::endl;
         exit(EXIT_FAILURE);
     }
+    for (int i = 0; argv[1][i] != '\0'; i++) {
+        if (!std::isdigit(argv[1][i])) {
+            std::cerr << "Port must be a number" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
     int port = std::atoi(argv[1]);
     std::string password = argv[2];
-    //check if port is an int and check if password exists
     signal(SIGINT, signal_handler);
     try
     {
-        Server server(port, password);
-        g_server = &server;
-        server.launchServer();
+        g_server = new Server(port, password);
+        g_server->launchServer();
     }
     catch(const std::exception& e)
     {
@@ -87,14 +84,15 @@ int main(int argc, char **argv)
  * 
  * 
  *                                                                          Change the parsing into a 2D array --> DONE
- * signals 
+ *                                                                          signals --> DONE
+ *                                                                          broadcast new nickname to all channels --> DONE
  *                                                                          atoi port --> DONE
- * ERR_NICKNAMEINUSE -- still assign same nickname 
+ *                                                                          nickname does not send the macro but do we really care ? otherwise done --> DONE
  *                                                                          set the cout correctly / colors ==> DONE
  *                                                                          cleanup variables not used --> DONE
  *                                                                          Align the "this->_nick", "get_nick()" and "_nick" --> DONE
- * send proper error message (to be checked)
- * sometimes we receive MODE #channel b --> apparently it is a ban but for nothing
+ *                                                                          send proper error message (to be checked) --> DONE
+ *                                                                          sometimes we receive MODE #channel b --> apparently it is a ban but for nothing --> DONE
  * 
  * 
  * CHECK WITH MAX:

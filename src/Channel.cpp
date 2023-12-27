@@ -140,10 +140,16 @@ void Channel::send_to_all_private(std::string msg, User *user, std::string sende
     }
 }
 
-void Channel::send_to_all_macro(std::string macro) {
+void Channel::send_to_all_macro(std::string macro, bool sendToSender, User *user) {
     if (_users.size() > 0) {
         for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-                (*it)->send_to(macro);
+                if ((*it)->get_nick() == user->get_nick())
+                {
+                    if (sendToSender == true)
+                        (*it)->send_to(macro);
+                }
+                else
+                    (*it)->send_to(macro);
         }
     }
 }
