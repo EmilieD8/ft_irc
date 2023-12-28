@@ -134,11 +134,10 @@ void Server::read_client() {
                     for (std::vector<User *>::iterator it = _clients.begin(); it != _clients.end(); it++) {
                         if (connectionFds[i].fd == (*it)->get_fd())
                         {
-                            std::cout << "quit" << std::endl;(*it)->command_quit(*this);
+                            (*it)->command_quit(*this);
                             break;
                         }
                     }
-                    std::cout << "reached" << std::endl;
                     bzero(buf, BUFFER_SIZE + 1);
                     fullBuffer.clear();
                     break;

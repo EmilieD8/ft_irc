@@ -44,9 +44,6 @@ class Channel {
         Channel();
         Channel(Channel const & src);
         Channel & operator=(Channel const & src);
-
-
-
         std::string _name;
         std::string _topic;
         std::vector<User*> _users;

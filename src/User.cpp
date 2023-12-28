@@ -291,6 +291,17 @@ void User::command_join(Server &server) {
     if (_message._paramsSplit.size() == 2)
         password = _message._paramsSplit[1];
     for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if ((*it)->get_name() == channelName)
+        {
+            for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
+                if ((*it2)->get_nick() == _nick) {
+                    set_channel_atm(**it);
+                    return;
+                }
+            }
+        }
+    }
+    for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
         if ((*it)->get_name() == channelName) {
             if ((*it)->get_limitSet()) {
                 if ((*it)->get_userSize() + 1 > (*it)->get_limit()) {
@@ -735,13 +746,21 @@ void User::command_privmsg(Server &server) {
     std::cout << _color << _fd - 3 << " < MSG " << _message._params << std::endl;
     std::string user = "\0";
     std::string msg;
-    std::cout << "is in a channel : " << _isInAChannel << std::endl;
-    if (!_isInAChannel || (_isInAChannel && _message._paramsSplit[0] != _channel_rn->get_name()))
+    std::string channel;
+    if (!_isInAChannel || (_isInAChannel && _message._paramsSplit[0][0] != '#'))
         user = _message._paramsSplit[0];
+    else
+        channel = _message._paramsSplit[0];
     for (int i = 1; i < (int)_message._paramsSplit.size(); i++)
         msg += _message._paramsSplit[i] + " ";
     if (msg[0] == ':')
         msg = msg.substr(1, msg.size() - 2);
+    for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if ((*it)->get_name() == channel) {
+           set_channel_atm(**it);
+           break;
+        }
+    }
     if (user == "\0")
         _channel_rn->send_to_all_private(msg, this, _nick);
     else
@@ -755,40 +774,52 @@ void User::command_privmsg(Server &server) {
 void User::command_part(Server &server) {
     std::cout << _color << _fd - 3 << " < PART " << _message._params << std::endl;
     std::string msg;
+    std::string channelName = _message._paramsSplit[0];
+    Channel* channelPtr = NULL;
     for (int i = 1; i < (int)_message._paramsSplit.size(); i++)
         msg += _message._paramsSplit[i] + " ";
     if (!msg.empty())
         msg = msg.substr(1, msg.size() - 2);
-    if (!_channel_rn) {
+    for (std::vector<Channel *>::iterator it = server.get_channels().begin(); it != server.get_channels().end(); it++) {
+        if ((*it)->get_name() == channelName)
+        {
+            for (std::vector<User *>::iterator it2 = (*it)->get_users().begin(); it2 != (*it)->get_users().end(); it2++) {
+                if ((*it2)->get_nick() == _nick)
+                    channelPtr = (*it);
+            }
+        }
+    }
+    if (!channelName.empty() && channelPtr == NULL) {
         send_to(ERR_NEEDMOREPARAMS(_message._command));
         return;
     }
     if (msg.empty())
-        _channel_rn->send_to_all_macro(PART(_nick, _name, _hostName, _channel_rn->get_name()), true, this);
+        channelPtr->send_to_all_macro(PART(_nick, _name, _hostName, channelPtr->get_name()), true, this);
     else
-        _channel_rn->send_to_all_macro(PART_REASON(_nick, _name, _hostName, _channel_rn->get_name(), msg), true, this);
-    _channel_rn->remove_user(*this);
-    _operatorStatusMap.erase(_channel_rn);
-    _isInvitedToChannel.erase(_channel_rn);
-    if (_channel_rn->get_userSize() == 0) {
+        channelPtr->send_to_all_macro(PART_REASON(_nick, _name, _hostName, channelPtr->get_name(), msg), true, this);
+    channelPtr->remove_user(*this);
+    _operatorStatusMap.erase(channelPtr);
+    _isInvitedToChannel.erase(channelPtr);
+    if (channelPtr->get_userSize() == 0) {
         std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(), _channel_rn);
         if (it != server.get_channels().end()) {
             server.get_channels().erase(it);
         }
-        delete _channel_rn;
+        delete channelPtr;
     }
     if (_operatorStatusMap.empty()){
-        _channel_rn = NULL;
+        channelPtr = NULL;
         _isInAChannel = false;
     }
     else {
         for (std::map<Channel *, bool>::iterator it = _operatorStatusMap.begin(); it != _operatorStatusMap.end(); ++it)
-            _channel_rn = it->first;
+            channelPtr = it->first;
         _isInAChannel = true;
     }
 }
 
 void User::command_kick() {
+    
     std::cout << _color << _fd - 3 << " < KICK " << _message._params << std::endl;
     if (!get_operatorStatus(_channel_rn)) {
         send_to(ERR_CHANOPRIVSNEEDED(_channel_rn->get_name()));
@@ -809,20 +840,18 @@ void User::command_kick() {
                 if ((*it)->get_nick() == userToBeKicked) {
                     _channel_rn->send_to_all_macro(KICK(_nick, _name, "localhost", _channel_rn->get_name(), userToBeKicked, reason), true, this);
                     found = true;
-                    _channel_rn->remove_user(**it);
                     (*it)->_operatorStatusMap.erase(_channel_rn);
                     (*it)->_isInvitedToChannel.erase(_channel_rn);
-                    (*it)->_channel_rn = NULL;
-                    (*it)->_isInAChannel = false;
-                    // if (_operatorStatusMap.empty()){
-                    //         _channel_rn = NULL;
-                    //         _isInAChannel = false;
-                    // }
-                    // else {
-                    //     for (std::map<Channel *, bool>::iterator it = _operatorStatusMap.begin(); it != _operatorStatusMap.end(); ++it)
-                    //         _channel_rn = it->first;
-                    //     _isInAChannel = true;
-                    // }
+                    _channel_rn->remove_user(**it);
+                    if ((*it)->_operatorStatusMap.size() == 0){
+                            (*it)->_channel_rn = NULL;
+                            (*it)->_isInAChannel = false;
+                    }
+                    else {
+                        for (std::map<Channel *, bool>::iterator it2 = _operatorStatusMap.begin(); it2 != _operatorStatusMap.end(); ++it2)
+                            (*it)->_channel_rn = (*it2).first;
+                        (*it)->_isInAChannel = true;
+                    }
                     break;
                 }
             }
@@ -884,16 +913,15 @@ void User::command_quit(Server &server) {
                 _operatorStatusMap.erase((*it));
                 _isInvitedToChannel.erase((*it));
                 if ((*it)->get_userSize() == 0) {
-                    std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(),
-                                                                    server.get_channels().end(), _channel_rn);
-                    if (it != server.get_channels().end()) {
+                    std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(), _channel_rn);
+                    if (it != server.get_channels().end())
                         channel_ptr = *it;
-                    }
                     break;
                 }
             }
         }
-        (*it)->remove_user(*User_ptr);
+        if (User_ptr != NULL)
+            (*it)->remove_user(*User_ptr);
     }
     if (channel_ptr != NULL) {
         std::vector<Channel *>::iterator it = std::find(server.get_channels().begin(), server.get_channels().end(),
@@ -918,27 +946,5 @@ void User::command_quit(Server &server) {
             break;
         }
     }
+    
 }
-
-
-/*irc interpretation : 
-* /mode +t +l 10 +o mimi ==> send #CHANNEL +tlo 10 mimi
-* /mode +t -l 10 +o mimi ==> send +t-l10+o mimi
-* /mode +t -l 58 +k hello ==> send +t-l58+k hello
-* /mode +t +l 58 +k hello ==> send +tlk 58 hello
-* /mode +t +l 58 -k hello ==> send +tl-k 58 hello 
-* /mode +t +l 58 -k hello +o ==> send +tl-k+o 58 hello
-
-
-* /mode +t +l ==> send "MODE #test +tl" ==> SEGFAULT   and should not do anything
-* /mode +t +l 10 ==> send "MODE #test +tl 10" - set +t and + l10
--t -l with the limit, does not work 
-issue with receiving some of the modes
-/mode +k 10 +l pass => password set but not limit
-==> in mine -> set the password to 10 and exception is thrown out for stoi
-/mode +k pass +l 10 -> send MODE #test +kl pass 10
-if one element is missing, wrong
-save the messages in a message and send them all at once ? 
-*/
-
-

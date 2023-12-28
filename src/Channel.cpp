@@ -133,7 +133,7 @@ void Channel::set_keySet(bool key) {
 void Channel::send_to_all_private(std::string msg, User *user, std::string sender) {
     if (_users.size() > 0) {
         for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); it++) {
-            if (((*it)->get_nick() != user->get_nick()) && (*it)->get_channel_atm()->get_name() == _name)
+            if (((*it)->get_nick() != user->get_nick()))
                 (*it)->send_to(PRIVMSG(sender, (*it)->get_name(), (*it)->get_host(), _name, msg));
         }
     }
