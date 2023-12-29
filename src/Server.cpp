@@ -6,7 +6,7 @@
 /*   By: edrouot <edrouot@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/11/24 11:50:47 by mschaub           #+#    #+#             */
-/*   Updated: 2023/12/27 14:36:54 by edrouot          ###   ########.fr       */
+/*   Updated: 2023/12/29 10:36:35 by edrouot          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,13 @@ Server::Server(int port, std::string password) {
 Server::~Server() {
 }
 
+Channel *Server::findChannel(std::string name) {
+    for (std::vector<Channel *>::iterator it = _channels.begin(); it != _channels.end(); it++) {
+        if ((*it)->get_name() == name)
+            return (*it);
+    }
+    return NULL;
+}
 
 Server::Server(Server const & src) {
     *this = src;

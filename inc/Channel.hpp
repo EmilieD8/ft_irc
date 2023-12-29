@@ -5,8 +5,6 @@ class User;
 
 class Channel {
     public:
-
-
         std::string get_topic() const;
         void set_topic(std::string topic);
 
@@ -35,6 +33,7 @@ class Channel {
         int get_userSize() const;
 
         ~Channel();
+        User *findUser(std::string name);
         Channel(std::string name);
         void send_to_all_private(std::string msg, User *user, std::string sender);
         void send_to_all_macro(std::string macro, bool sendToSender, User *user);

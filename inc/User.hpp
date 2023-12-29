@@ -58,7 +58,7 @@ class User {
         void command_mode(Server &server);
         void command_privmsg(Server &server);
         void command_part(Server &server);
-        void command_kick();
+        void command_kick(Server &server);
         void command_invite(Server &server);
 
         s_flag *updateStruct(s_flag *newFlag, int sign, bool isValid);

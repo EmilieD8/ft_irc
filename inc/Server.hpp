@@ -16,7 +16,7 @@ class Server {
         std::vector<pollfd> * &get_pollfds();
         std::vector<Channel *> &get_channels();
         std::string get_password() const;
-
+        Channel *findChannel(std::string name);
         ~Server();
         void launchServer();
         Server(int port, std::string password);

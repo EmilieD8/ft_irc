@@ -48,6 +48,14 @@ void Channel::add_user(User &user) {
     _users.push_back(&user);
 }
 
+User *Channel::findUser(std::string nick) {
+    for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
+        if ((*it)->get_nick() == nick)
+            return (*it);
+    }
+    return NULL;
+}
+
 void Channel::remove_user(User &user) {
     for (std::vector<User *>::iterator it = _users.begin(); it != _users.end(); ++it) {
         if ((*it)->get_fd() == user.get_fd()) {
