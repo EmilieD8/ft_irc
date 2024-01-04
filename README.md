@@ -11,6 +11,10 @@ You will be able to test it with your browser.
 
 ## Usage
 
+./irc <port> <password>
+
+Works best with irssi.
+
 ## Ressources
 
 https://modern.ircdocs.horse/#ping-message
